@@ -1,11 +1,11 @@
-from aiogram import Router, types, F
+from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
-from bot.states import AuthStates
+from bot.FSM.states import AuthStates
 
 from db.database import SessionLocal
-from db.services.service import (
+from db.services.user_crud import (
     register_user, login_user, logout_user
 )
 

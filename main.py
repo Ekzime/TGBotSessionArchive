@@ -1,9 +1,14 @@
 import logging
 import asyncio
-from settings.config import TELEGRAM_BOT_API
+import os
 from aiogram import Bot, Dispatcher
 from bot.handlers.auth_handlers import router as auth_router
 from bot.middlewares.auth_middleware import AuthMiddleware
+from dotenv import load_dotenv
+
+load_dotenv()
+
+TELEGRAM_BOT_API = os.getenv("TELEGRAM_BOT_API")
 
 logging.basicConfig(level=logging.DEBUG)
 

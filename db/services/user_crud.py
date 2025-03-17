@@ -1,9 +1,9 @@
 import uuid
 from passlib.hash import bcrypt
 from datetime import datetime, timedelta
-from sqlalchemy.orm import Session, raiseload
+from sqlalchemy.orm import Session
 
-from db.models.model import User, UserSession
+from db.models.model import User, UserSession, TelegramAccount
 from db.services.manager import get_db_session # контекст менеджер
 
 def register_user(username: str,password: str, is_admin: bool=False) -> User:
@@ -90,8 +90,6 @@ def login_user(username: str, password: str, telegram_user_id: int, session_hour
         }
         # По выходу из блока with будет auto-commit (если нет исключений)
         return session_data
-
-
 
 def logout_user(telegram_user_id: int):
     """

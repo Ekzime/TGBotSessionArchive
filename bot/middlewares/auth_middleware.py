@@ -2,7 +2,7 @@ from aiogram import BaseMiddleware # базовый класс для мидлв
 from typing import Callable, Awaitable, Dict, Any #  типы для аннотаций.
 from aiogram.types import Message
 from db.database import SessionLocal
-from db.services.service import get_current_user # функция, которая проверяет в БД, есть ли активная сессия для telegram_user_id, и возвращает объект User или None.
+from db.services.user_crud import get_current_user # функция, которая проверяет в БД, есть ли активная сессия для telegram_user_id, и возвращает объект User или None.
 
 class AuthMiddleware(BaseMiddleware):
     async def __call__(
