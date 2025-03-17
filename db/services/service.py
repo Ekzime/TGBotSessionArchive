@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, raiseload
 from db.models.model import User, UserSession
 from db.services.manager import get_db_session # контекст менеджер
 
-def register_user(db: Session,username: str,password: str, is_admin: bool=False) -> User:
+def register_user(username: str,password: str, is_admin: bool=False) -> User:
     """
         Регистрирует нового пользователя:
         - Проверяет, что username не занят
@@ -16,7 +16,7 @@ def register_user(db: Session,username: str,password: str, is_admin: bool=False)
     with get_db_session() as db:
         # проверка, нет ли такого пользователя в БД
         existing = db.query(User).filter(User.username == username).first()
-        if not existing:
+        if existing:
             raise ValueError("Пользователь с таким именем уже существует!")
 
         # проверка на длину пароля
@@ -33,16 +33,17 @@ def register_user(db: Session,username: str,password: str, is_admin: bool=False)
             is_admin=is_admin
         )
         db.add(new_user)
-        # коммит делает контекст менеджер!
-        db.flush()
-        db.refresh(new_user)
-        # В конце блока `with` автоматически будет:
-        # - commit() (если не было исключений)
-        # - rollback() (если было исключение)
-        # - close() (всегда)
-        return new_user
+        db.flush()  # чтобы new_user.id заполнилось
+        # Формируем словарь
+        user_data = {
+            "id": new_user.id,
+            "username": new_user.username,
+            "is_admin": new_user.is_admin
+        }
+        # Автоматический commit при выходе из with, если нет исключений
+        return user_data
 
-def login_user(db: Session, username: str, password: str, telegram_user_id: int, session_hours=24) -> UserSession:
+def login_user(username: str, password: str, telegram_user_id: int, session_hours=24) -> UserSession:
     """
         Авторизует пользователя:
         - Проверяем, что пользователь существует
@@ -50,44 +51,58 @@ def login_user(db: Session, username: str, password: str, telegram_user_id: int,
         - Создаём сессию (запись в user_sessions)
         - Возвращаем session_token
     """
-    # проверка на существование юзера в таблицe
-    user = db.query(User).filter(User.username==username).first() # type: ignore
-    if not user:
-        raise ValueError("Пользователь не найден! Пройдите регистрацию для входа! \n Введите /register для регистрации профиля.")
-    # проверка пароля
-    if not bcrypt.verify(password, user.password_hash):
-        raise ValueError("Неверный пароль, введите /login и попробуйте еще раз!")
+    with get_db_session() as db:
+        # 1) Проверяем пользователя
+        user = db.query(User).filter(User.username == username).first()  # type: ignore
+        if not user:
+            raise ValueError(
+                "Пользователь не найден! Пройдите регистрацию для входа! \n Введите /register для регистрации профиля.")
+        # 2) проверка пароля
+        if not bcrypt.verify(password, user.password_hash):
+            raise ValueError("Неверный пароль, введите /login и попробуйте еще раз!")
 
-    # Проверка на существование сесии по telegram_user_id
-    existing_session = db.query(UserSession).filter_by(telegram_user_id=str(telegram_user_id)).first()
-    if existing_session:
-        # здесь так и не определился. Если есть текущая сессия, ее можно удалить и создать новую, либо выбросить исключение
-        # db.delete(existing_session)
-        # db.commit()
-        raise ValueError("У вас уже есть активная сессия! Что бы выйти, введите /logout")
+        # 3) Проверяем, нет ли уже сессии
+        existing_session = db.query(UserSession).filter_by(telegram_user_id=str(telegram_user_id)).first()
+        if existing_session:
+            # здесь так и не определился. Если есть текущая сессия, ее можно удалить и создать новую, либо выбросить исключение
+            # db.delete(existing_session)
+            # db.commit()
+            raise ValueError("У вас уже есть активная сессия! Что бы выйти, введите /logout")
 
-    # создание сессии
-    token = str(uuid.uuid4())
-    expires = datetime.utcnow() + timedelta(hours=session_hours)
-    new_session = UserSession(
-        user_id=user.id,
-        session_token = token,
-        expires_at = expires
-    )
-    db.add(new_session)
-    db.commit()
-    db.refresh(new_session)
-    return new_session
+        # 4) Создаём новую сессию
+        token = str(uuid.uuid4())
+        expires = datetime.utcnow() + timedelta(hours=session_hours)
+        new_session = UserSession(
+            user_id=user.id,
+            telegram_user_id=str(telegram_user_id),
+            session_token=token,
+            expires_at=expires
+        )
+        db.add(new_session)
+        # Используем flush(), чтобы получить new_session.id (и другие поля) до выхода из with
+        db.flush()
+        # Формируем словарь с нужными данными
+        session_data = {
+            "id": new_session.id,
+            "session_token": new_session.session_token,
+            "expires_at": new_session.expires_at,
+            "user_id": user.id
+        }
+        # По выходу из блока with будет auto-commit (если нет исключений)
+        return session_data
 
-def logout_user(db: Session, telegram_user_id: int):
+
+
+def logout_user(telegram_user_id: int):
     """
         Удаляет (или помечает неактивной) запись сессии по telegram_user_id
     """
-    session_obj = db.query(UserSession).filter_by(telegram_user_id=str(telegram_user_id)).first() # type: ignore
-    if not session_obj:
-        raise ValueError("Нет активной сессии")
-    db.delete(session_obj)
-    db.commit()
+    with get_db_session() as db:
+        session_obj = db.query(UserSession).filter_by(telegram_user_id=str(telegram_user_id)).first()  # type: ignore
+        if not session_obj:
+            raise ValueError("Нет активной сессии")
+        db.delete(session_obj)
+        db.commit()
 
 def get_current_user(db: Session,telegram_user_id: int):
     """
