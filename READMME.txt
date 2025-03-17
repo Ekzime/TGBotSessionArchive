@@ -1,0 +1,17 @@
+Добавь файлы в индекс и сделай первый коммит
+git add .
+git commit -m "Initial commit"
+
+Связать локальный репозиторий
+git remote add origin https://github.com/YourName/BotSessionTG.git
+
+Отправить локальное изминение
+git push -u origin master
+
+Отправляешь на GitHub:
+git push
+
+Делать маленькие осмысленные коммиты, например:
+«Add context manager for DB»
+«Implement login user with telegram_user_id»
+«Add /logout command»
