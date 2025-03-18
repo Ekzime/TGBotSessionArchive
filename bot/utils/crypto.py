@@ -1,6 +1,7 @@
 import os
-from cryptography.fernet import Fernet
 from dotenv import load_dotenv
+from cryptography.fernet import Fernet
+
 
 # Выгрузка ключа шифрования, и проверка на наличие
 load_dotenv()

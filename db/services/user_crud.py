@@ -1,10 +1,11 @@
 import uuid
-from passlib.hash import bcrypt
 from datetime import datetime, timedelta
+
+from passlib.hash import bcrypt
 from sqlalchemy.orm import Session
 
 from db.models.model import User, UserSession, TelegramAccount
-from db.services.manager import get_db_session # контекст менеджер
+from db.services.manager import get_db_session  # контекст-менеджер
 
 def register_user(username: str,password: str, is_admin: bool=False) -> dict:
     """

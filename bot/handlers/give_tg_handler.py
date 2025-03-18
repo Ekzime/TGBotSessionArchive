@@ -1,17 +1,21 @@
+import os
+# сторонние библиотеки
 from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-
+from dotenv import load_dotenv
 from telethon import TelegramClient
 from telethon.errors import SessionPasswordNeededError
 from telethon.sessions import StringSession
-
+# локальные модули
 from bot.FSM.states import GiveTgStates
-
 from db.models.model import User
-from db.services.telegram_crud import create_telegram_account, get_telegram_account_by_phone, get_telegram_account_by_alias
-from dotenv import load_dotenv
-import os
+from db.services.telegram_crud import (
+    create_telegram_account,
+    get_telegram_account_by_phone,
+    get_telegram_account_by_alias
+)
+
 
 load_dotenv()  # загрузка переменных из .env
 API_TELETHON_ID = int(os.getenv("API_TELETHON_ID"))

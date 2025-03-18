@@ -1,6 +1,6 @@
+import os
 import logging
 import asyncio
-import os
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from bot.handlers.auth_handlers import router as auth_router

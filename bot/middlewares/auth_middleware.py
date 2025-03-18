@@ -1,10 +1,13 @@
-from aiogram import BaseMiddleware # базовый класс для мидлварей Aiogram.
-from typing import Callable, Awaitable, Dict, Any #  типы для аннотаций.
-from aiogram.types import Message
+from typing import Any, Awaitable, Callable, Dict
+
+from aiogram import BaseMiddleware
 from aiogram.fsm.context import FSMContext
-from db.database import SessionLocal
-from db.services.user_crud import get_current_user # функция, которая проверяет в БД, есть ли активная сессия для telegram_user_id, и возвращает объект User или None.
+from aiogram.types import Message
+
 from bot.FSM.states import AuthStates
+
+from db.database import SessionLocal
+from db.services.user_crud import get_current_user
 
 allowed_states = [
     AuthStates.wait_for_username,

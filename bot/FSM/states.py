@@ -13,3 +13,6 @@ class GiveTgStates(StatesGroup):
     wait_2fa = State()
     wait_alias = State()
     wait_alias_2fa = State()
+
+class TakeTgStates(StatesGroup):
+    wait_alias = State()

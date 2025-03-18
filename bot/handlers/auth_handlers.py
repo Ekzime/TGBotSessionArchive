@@ -5,9 +5,7 @@ from aiogram.fsm.context import FSMContext
 from bot.FSM.states import AuthStates
 
 from db.database import SessionLocal
-from db.services.user_crud import (
-    register_user, login_user, logout_user
-)
+from db.services.user_crud import login_user, logout_user, register_user
 
 router = Router()
 
