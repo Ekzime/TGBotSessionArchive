@@ -59,7 +59,14 @@ def get_telegram_account_by_alias(user_id: int, alias: str):
        Возвращает одну запись TelegramAccount (или None) по alias и user_id.
     """
     with get_db_session() as db:
-        return db.query(TelegramAccount).filter_by(user_id=user_id, alias=alias).first()
+        account = db.query(TelegramAccount).filter_by(user_id=user_id, alias=alias).first()
+        if account:
+            return {
+                "id": account.id,
+                "alias": account.alias,
+                "phone": account.phone,
+            }
+        return None
 
 def list_telegram_accounts(user_id: int):
     """
@@ -88,3 +95,15 @@ def decrypt_two_factor_pass(acc: TelegramAccount):
     if not acc.two_factor_pass:
         return None
     return decrypt_text(acc.two_factor_pass)
+
+def get_telegram_account_by_phone(user_id: int, phone: str):
+    with get_db_session() as db:
+        account = db.query(TelegramAccount).filter_by(user_id=user_id, phone=phone).first()
+        if account:
+            # Возвращаем только нужные данные простых типов, не объект модели целиком
+            return {
+                "id": account.id,
+                "alias": account.alias,
+                "phone": account.phone,
+            }
+        return None
