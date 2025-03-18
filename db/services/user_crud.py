@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from db.models.model import User, UserSession, TelegramAccount
 from db.services.manager import get_db_session # контекст менеджер
 
-def register_user(username: str,password: str, is_admin: bool=False) -> User:
+def register_user(username: str,password: str, is_admin: bool=False) -> dict:
     """
         Регистрирует нового пользователя:
         - Проверяет, что username не занят
@@ -43,7 +43,7 @@ def register_user(username: str,password: str, is_admin: bool=False) -> User:
         # Автоматический commit при выходе из with, если нет исключений
         return user_data
 
-def login_user(username: str, password: str, telegram_user_id: int, session_hours=24) -> UserSession:
+def login_user(username: str, password: str, telegram_user_id: int, session_hours=24) -> dict:
     """
         Авторизует пользователя:
         - Проверяем, что пользователь существует
@@ -61,13 +61,10 @@ def login_user(username: str, password: str, telegram_user_id: int, session_hour
         if not bcrypt.verify(password, user.password_hash):
             raise ValueError("Неверный пароль, введите /login и попробуйте еще раз!")
 
-        # 3) Проверяем, нет ли уже сессии
-        existing_session = db.query(UserSession).filter_by(telegram_user_id=str(telegram_user_id)).first()
+        # 3) Проверяем, нет ли уже сессии по user_id
+        existing_session = db.query(UserSession).filter_by(user_id=user.id).first()
         if existing_session:
-            # здесь так и не определился. Если есть текущая сессия, ее можно удалить и создать новую, либо выбросить исключение
-            # db.delete(existing_session)
-            # db.commit()
-            raise ValueError("У вас уже есть активная сессия! Что бы выйти, введите /logout")
+            db.delete(existing_session)
 
         # 4) Создаём новую сессию
         token = str(uuid.uuid4())
