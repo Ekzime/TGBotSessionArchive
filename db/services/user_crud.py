@@ -61,10 +61,10 @@ def login_user(username: str, password: str, telegram_user_id: int, session_hour
         if not bcrypt.verify(password, user.password_hash):
             raise ValueError("Неверный пароль, введите /login и попробуйте еще раз!")
 
-        # 3) Проверяем, нет ли уже сессии по user_id
-        existing_session = db.query(UserSession).filter_by(user_id=user.id).first()
-        if existing_session:
-            db.delete(existing_session)
+        # 3) Удаляем ВСЕ старые сессии:
+        db.query(UserSession).filter(
+            (UserSession.user_id == user.id) | (UserSession.telegram_user_id == str(telegram_user_id))
+        ).delete(synchronize_session=False)
 
         # 4) Создаём новую сессию
         token = str(uuid.uuid4())

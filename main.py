@@ -5,7 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from bot.handlers.auth_handlers import router as auth_router
 from bot.handlers.give_tg_handler import router as give_tg_router
-from bot.middlewares.auth_middleware import CurrentUserMiddleware, AuthMiddleware
+from bot.middlewares.auth_middleware import AuthMiddleware
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,7 +19,6 @@ async def main():
     dp = Dispatcher(storage=MemoryStorage())
 
     # Подключаем middleware для обработки всех сообщений
-    dp.message.middleware(CurrentUserMiddleware())
     dp.message.middleware(AuthMiddleware())
 
     dp.include_router(auth_router)

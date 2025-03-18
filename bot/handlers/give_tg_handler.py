@@ -111,7 +111,7 @@ async def give_tg_2fa(message: types.Message, state: FSMContext):
     password_2fa = message.text.strip()
     data = await state.get_data()
 
-    client = TelegramClient(StringSession(data["raw_session"]), "API_ID", "API_HASH")
+    client = TelegramClient(StringSession(data["raw_session"]), "API_TELETHON_ID", "API_TELETHON_HASH")
     await client.connect()
 
     try:

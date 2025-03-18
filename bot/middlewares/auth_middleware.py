@@ -15,29 +15,6 @@ allowed_states = [
 ]
 allowed_commands = ["/start", "/login", "/register"]
 
-
-class CurrentUserMiddleware(BaseMiddleware):
-    async def __call__(
-            self,
-            handler: Callable[[Message, Dict[str, Any]], Awaitable[Any]],
-            event: Message,
-            data: Dict[str, Any]
-    ) -> Any:
-        # 1) Создаём новую сессию SQLAlchemy
-        db = SessionLocal() # создаём новую сессию к БД (SQLAlchemy ORM)
-        user = None #  по умолчанию считаем, что «пользователь не залогинен»
-        # проверяем, есть ли отправитель у сообщения
-        if event.from_user:
-            from_user_id = event.from_user.id
-            user = get_current_user(db, from_user_id) # Пытаемся найти текущего пользователя
-
-        data["current_user"] = user # Кладём результат в data["current_user"]
-
-        try:
-            result = await handler(event,data)
-        finally:
-            db.close()
-
 class AuthMiddleware(BaseMiddleware):
     async def __call__(
             self,
@@ -45,21 +22,30 @@ class AuthMiddleware(BaseMiddleware):
             event: Message,
             data: Dict[str, Any]
     ) -> Any:
+        # Создание новой сессии с базой данных при каждом запросе
         db = SessionLocal()
         current_user = None
 
         try:
+            # Проверка, пришло ли событие от пользователя
             if event.from_user:
                 current_user = get_current_user(db, event.from_user.id)
 
+            # Добавляем текущего пользователя (или None) в словарь data,
+            # чтобы он был доступен в дальнейшем внутри обработчиков
             data["current_user"] = current_user
 
+            # Получаем текущее состояние FSM, если оно есть
             state: FSMContext = data.get("state")
             current_state = await state.get_state() if state else None
 
+            # Если текущий пользователь не авторизован
             if current_user is None:
+                # Извлекаем команду (например: "/start", "/help", "/login")
                 command = event.text.split()[0] if event.text else ""
 
+                # Проверяем, является ли команда разрешённой для неавторизованных пользователей
+                # либо состояние находится в списке разрешённых состояний
                 if command not in allowed_commands and current_state not in allowed_states:
                     await event.answer("Сначала /login или /register, чтобы пользоваться ботом!")
                     return
