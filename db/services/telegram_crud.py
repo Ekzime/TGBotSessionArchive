@@ -5,10 +5,12 @@ from db.models.model import TelegramAccount
 from db.services.manager import get_db_session
 from bot.utils.crypto import encrypt_text, decrypt_text
 
-
 logger = logging.getLogger(__name__)
 
-def _encrypt_pass_if_needed(two_factor_pass: str):
+def _decrypt_two_factor_pass(two_factor_pass: str):
+    return decrypt_text(two_factor_pass) if two_factor_pass else None
+
+def _encrypt_two_factor_pass(two_factor_pass: str):
     return encrypt_text(two_factor_pass) if two_factor_pass else None
 
 def create_telegram_account(user_id: int,
@@ -38,7 +40,7 @@ def create_telegram_account(user_id: int,
             phone=phone,
             session_string=session_string,
             two_factor=two_factor,
-            two_factor_pass=_encrypt_pass_if_needed(two_factor_pass),
+            two_factor_pass=_encrypt_two_factor_pass(two_factor_pass),
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()  # Можно сделать через модель: onupdate=datetime.utcnow
         )
@@ -66,6 +68,9 @@ def get_telegram_account_by_alias(user_id: int, alias: str):
                 "id": account.id,
                 "alias": account.alias,
                 "phone": account.phone,
+                "session_string": account.session_string,
+                "two_factor":account.two_factor,
+                "two_factor_pass":_decrypt_two_factor_pass(account.two_factor_pass)
             }
         return None
 
@@ -106,5 +111,8 @@ def get_telegram_account_by_phone(user_id: int, phone: str):
                 "id": account.id,
                 "alias": account.alias,
                 "phone": account.phone,
+                "session_string": account.session_string,
+                "two_factor": account.two_factor,
+                "two_factor_pass": _decrypt_two_factor_pass(account.two_factor_pass)
             }
         return None
