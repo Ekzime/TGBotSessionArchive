@@ -128,3 +128,15 @@ def get_telegram_account_by_phone(user_id: int, phone: str):
                 "two_factor_pass": _decrypt_two_factor_pass(account.two_factor_pass)
             }
         return None
+
+def delete_telegram_account(alias: str, phone:str) -> str:
+    with get_db_session() as db:
+        account = db.query(TelegramAccount).filter_by(alias=alias, phone=phone).first()
+        if account:
+            db.delete(account)
+            db.commit()
+            logger.info(f"✅ Аккаунт '{alias}' (phone={phone}) удалён после успешного входа.")
+            return True
+        else:
+            logger.warning(f"⚠️ Аккаунт '{alias}' (phone={phone}) не найден для удаления.")
+            return False

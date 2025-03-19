@@ -57,7 +57,7 @@ async def get_password(message: types.Message, state: FSMContext):
 # ------------------- LOGIN -------------------
 @router.message(Command("login"))
 async def cmd_login(message: types.Message, state: FSMContext):
-    await message.answer("<b>Для авторизации введите username:<\b> ",parse_mode="HTML")
+    await message.answer("<b>Для авторизации введите username:</b> ",parse_mode="HTML")
     await state.set_state(AuthStates.wait_for_login_username)
 
 @router.message(AuthStates.wait_for_login_username)

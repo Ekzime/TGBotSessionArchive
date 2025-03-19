@@ -9,7 +9,7 @@ router = Router()
 async def cmd_view_tg(message: types.Message, current_user: User):
     accounts = list_telegram_accounts(user_id=current_user.id)
     if not accounts:
-        await message.answer("Аккаунты не найдены! Проверьте подключение к БД!")
+        await message.answer("Аккаунты не найдены!")
     else:
         msg_text = "<b>Список ваших аккаунтов:</b>\n\n"
         for acc in accounts:
