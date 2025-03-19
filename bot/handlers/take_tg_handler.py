@@ -33,6 +33,7 @@ async def listen_for_code(string_session, chat_id):
         if match:
             code = match.group(0)
             await bot.send_message(chat_id, f"🔑 Ваш код подтверждения: <code>{code}</code>",parse_mode="HTML")
+            client.disconnect()
     # удержание подключения, для обработчика
     await client.run_until_disconnected()
 
@@ -54,9 +55,9 @@ async def cmd_take_tg(message: types.Message, current_user: User):
     # проверка на наличие f2a, для вывода пользователю
     if account.get('two_factor') is True:
         await message.answer(
-            f"✅ Вот номер телефона, привязанный к аккаунту {alias}:\n📞 {account['phone']}\npass: {account['two_factor_pass']} \n\nВведите этот номер в Telegram.")
+            f"✅ Вот номер телефона, привязанный к аккаунту <b>{alias}</b>:\n📞 <code>{account['phone']}</code>\npass: <code>{account['two_factor_pass']}</code> \n\nВведите этот номер в Telegram.", parse_mode="HTML")
     else:
-        await message.answer(f"✅ Вот номер телефона, привязанный к аккаунту {alias}:\n📞 {account['phone']}\n\nВведите этот номер в Telegram.")
+        await message.answer(f"✅ Вот номер телефона, привязанный к аккаунту <code>{alias}</code>:\n📞 <code>{account['phone']}</code>\n\nВведите этот номер в Telegram.",parse_mode="HTML")
 
     # Запускаем фонового слушателя кода
     asyncio.create_task(listen_for_code(account['session_string'], message.chat.id))
