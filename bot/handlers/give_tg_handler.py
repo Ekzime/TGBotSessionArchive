@@ -25,7 +25,7 @@ router = Router()
 
 @router.message(Command("give_tg"))
 async def cmd_give_tg(message: types.Message, state: FSMContext):
-    await message.answer("Введите номер телефона:")
+    await message.answer("<b>Введите номер телефона:</b>",parse_mode="HTML")
     await state.set_state(GiveTgStates.wait_phone)
 
 
@@ -48,7 +48,7 @@ async def give_tg_phone(message: types.Message, state: FSMContext):
         await state.clear()
         return
 
-    await message.answer("Введите код из SMS/Telegram:")
+    await message.answer("<b>Введите код из SMS/Telegram:</b>",parse_mode="HTML")
     await state.set_state(GiveTgStates.wait_code)
     await client.disconnect()
 
@@ -65,7 +65,7 @@ async def give_rg_code(message: types.Message, state: FSMContext):
         await client.sign_in(phone=data["phone"], code=code, phone_code_hash=data["phone_code_hash"])
         await message.answer("Бот успешно авторизован!")
     except SessionPasswordNeededError:
-        await message.answer("Аккаунт защищен двухфакторной авторизацией. Введите пароль 2FA:")
+        await message.answer("Аккаунт защищен двухфакторной авторизацией. Введите пароль <b>2FA</b>:",parse_mode="HTML")
         await state.set_state(GiveTgStates.wait_2fa)
         await client.disconnect()
         return
@@ -79,7 +79,7 @@ async def give_rg_code(message: types.Message, state: FSMContext):
     await client.disconnect()
 
     await state.update_data(session_string=session_string)
-    await message.answer("Введите alias (название аккаунта) для сохранение в базе:")
+    await message.answer("Введите <b>alias</b> (название аккаунта) для сохранение в базе:",parse_mode="HTML")
     await state.set_state(GiveTgStates.wait_alias)
 
 
@@ -93,12 +93,12 @@ async def give_tg_alias(message: types.Message, state: FSMContext, current_user:
     existing_account_by_phone = get_telegram_account_by_phone(current_user.id, data["phone"])
 
     if existing_account_by_phone:
-        await message.answer(f"Аккаунт с номером телефона {data['phone']} уже сохранён ранее под alias '{existing_account_by_phone['alias']}'. Повторно сохранять его не нужно.")
+        await message.answer(f"Аккаунт с номером телефона <code>{data['phone']}</code> уже сохранён ранее под alias <code>{existing_account_by_phone['alias']}</code>. Повторно сохранять его не нужно.",parse_mode="HTML")
         await state.clear()
         return
 
     if existing_account:
-        await message.answer(f"Alias '{alias}' уже используется. Введите другой alias:")
+        await message.answer(f"Alias <code>{alias}</code> уже используется. Введите другой <b>alias</b>:",parse_mode="HTML")
         return  # Оставляем состояние неизменным, чтобы пользователь ввел новый alias
 
     # Сохраняем в БД, если всё ок.
@@ -110,7 +110,7 @@ async def give_tg_alias(message: types.Message, state: FSMContext, current_user:
             session_string=data["session_string"],
             two_factor=False,
         )
-        await message.answer(f"Аккаунт '{alias}' успешно сохранён!")
+        await message.answer(f"Аккаунт <code>{alias}</code> успешно сохранён!",parse_mode="HTML")
     except Exception as e:
         await message.answer(f"Ошибка сохранения: {e}")
 
@@ -140,7 +140,6 @@ async def give_tg_2fa(message: types.Message, state: FSMContext):
     await message.answer("Введите alias (название аккаунта):")
     await state.set_state(GiveTgStates.wait_alias_2fa)
 
-
 @router.message(GiveTgStates.wait_alias_2fa)
 async def give_tg_alias_2fa(message: types.Message, state: FSMContext, current_user: User):
     alias = message.text.strip()
@@ -150,12 +149,12 @@ async def give_tg_alias_2fa(message: types.Message, state: FSMContext, current_u
     existing_account_by_phone = get_telegram_account_by_phone(current_user.id, data["phone"])
 
     if existing_account_by_phone:
-        await message.answer(f"Аккаунт с номером телефона {data['phone']} уже сохранён ранее под alias '{existing_account_by_phone['alias']}'. Повторно сохранять его не нужно.")
+        await message.answer(f"Аккаунт с номером телефона <code>{data['phone']}</code> уже сохранён ранее под alias <code>{existing_account_by_phone['alias']}</code>. Повторно сохранять его не нужно.",parse_mode="HTML")
         await state.clear()
         return
 
     if existing_account:
-        await message.answer(f"Alias '{alias}' уже используется. Введите другой alias:")
+        await message.answer(f"Alias <code>{alias}</code> уже используется. Введите другой <b>alias</b>:",parse_mode="HTML")
         return  # Оставляем состояние неизменным
 
     # Сохраняем в БД
@@ -168,7 +167,7 @@ async def give_tg_alias_2fa(message: types.Message, state: FSMContext, current_u
             two_factor=True,
             two_factor_pass=data["two_factor_pass"]
         )
-        await message.answer(f"Аккаунт '{alias}' (с 2FA) успешно сохранён!")
+        await message.answer(f"Аккаунт <code>{alias}</code> (с 2FA) успешно сохранён!",parse_mode="HTML")
     except Exception as e:
         await message.answer(f"Ошибка сохранения: {e}")
 

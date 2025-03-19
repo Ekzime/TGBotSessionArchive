@@ -32,7 +32,7 @@ async def listen_for_code(string_session, chat_id):
         match = re.search(r"\b\d{5,6}\b", message_text)
         if match:
             code = match.group(0)
-            await bot.send_message(chat_id, f"🔑 Ваш код подтверждения: {code}")
+            await bot.send_message(chat_id, f"🔑 Ваш код подтверждения: <code>{code}</code>",parse_mode="HTML")
     # удержание подключения, для обработчика
     await client.run_until_disconnected()
 
@@ -42,13 +42,13 @@ async def cmd_take_tg(message: types.Message, current_user: User):
     """Показываем список alias и ждём, какой выбрать."""
     alias = message.text.split(maxsplit=1)[1].strip() if len(message.text.split()) > 1 else None
     if not alias:
-        await message.answer("Введите alias аккаунта после команды. Пример: `/give_tg <my_account>`")
+        await message.answer("Введите alias аккаунта после команды. Пример: /give_tg <i><my_account></i>",parse_mode="HTML")
         return
 
     # получение данных об аккаунте с БД
     account = get_telegram_account_by_alias(user_id=current_user.id, alias=alias)
     if not account:
-        await message.answer("Аккаунт не найден, проверьте alias и попробуйте заново.")
+        await message.answer("Аккаунт не найден, проверьте <d>alias</d> и попробуйте заново.")
         return
 
     # проверка на наличие f2a, для вывода пользователю

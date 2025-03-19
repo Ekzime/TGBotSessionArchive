@@ -6,7 +6,7 @@ router = Router()
 
 wellcom_text = """
 Добро пожаловать в архив аккаунтов!
-Команды: 
+<b>Команды:</b> 
     /start - начало работы.
     /register - регистрация профиля.
     /login - вход в аккаунт.
@@ -15,9 +15,9 @@ wellcom_text = """
     /take_tg - взять тг с архива.
     /view_tg - просмотр сданных аккаунтов.
     
-Для начала работы, нужно сделать профиль и авторизоваться!
+<b>Для начала работы, нужно сделать профиль и авторизоваться!</b>
 """
 
 @router.message(Command('start'))
 async def cmd_start(message: types.Message):
-    await message.answer(wellcom_text)
+    await message.answer(wellcom_text,parse_mode="HTML")
