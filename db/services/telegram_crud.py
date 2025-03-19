@@ -76,10 +76,22 @@ def get_telegram_account_by_alias(user_id: int, alias: str):
 
 def list_telegram_accounts(user_id: int):
     """
-        Возвращает список всех аккаунтов, принадлежащих user_id.
+    Возвращает список всех аккаунтов, принадлежащих user_id.
     """
     with get_db_session() as db:
-        return db.query(TelegramAccount).filter_by(user_id=user_id).all()
+        accounts = db.query(TelegramAccount).filter_by(user_id=user_id).all()
+        result = []
+        for account in accounts:
+            result.append({
+                "id": account.id,
+                "alias": account.alias,
+                "phone": account.phone,
+                "session_string": account.session_string,
+                "two_factor": account.two_factor,
+                "two_factor_pass": _decrypt_two_factor_pass(account.two_factor_pass)
+            })
+        return result
+
 
 def update_telegram_account(acc: TelegramAccount, **kwargs):
     """
