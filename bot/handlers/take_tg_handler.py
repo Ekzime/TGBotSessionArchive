@@ -11,7 +11,7 @@ from telethon.errors import SessionRevokedError, FloodWaitError
 from telethon.sessions import StringSession
 from telethon.tl.functions.account import GetAuthorizationsRequest
 
-from bot.core.bot_instance import bot  # Предположим, что у вас есть bot-объект
+from bot.core.bot_instance import bot
 from db.services.telegram_crud import (
     get_telegram_account_by_alias,
     delete_telegram_account,

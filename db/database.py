@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 SQLALCHEMY_DATABASE_URL = os.getenv("SQLALCHEMY_DATABASE_URL")
-engine = create_engine(SQLALCHEMY_DATABASE_URL,echo=True)
+engine = create_engine(SQLALCHEMY_DATABASE_URL,echo=False) # если нужны логи с sqlalchemy echo=True
 
 # Фабрика сессий (SessionLocal)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
