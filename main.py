@@ -5,6 +5,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from bot.handlers.auth_handlers import router as auth_router
 from bot.handlers.give_tg_handler import router as give_tg_router
 from bot.handlers.take_tg_handler import router as take_rg_router
+from bot.handlers.start_handler import router as start_router
 from bot.middlewares.auth_middleware import AuthMiddleware
 from bot.core.bot_instance import bot
 
@@ -14,8 +15,10 @@ async def main():
     dp = Dispatcher(storage=MemoryStorage())
     dp.message.middleware(AuthMiddleware())
     dp.include_router(auth_router)
+    dp.include_router(start_router)
     dp.include_router(give_tg_router)
     dp.include_router(take_rg_router)
+
 
     await dp.start_polling(bot)
 
