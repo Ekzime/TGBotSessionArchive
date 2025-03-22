@@ -17,6 +17,7 @@ allowed_states = [
     AuthStates.wait_for_login_password
 ]
 allowed_commands = ["/start", "/login", "/register"]
+allowed_admin_commands = ["/admin_panel", "/cleanup_sessions", "/enable_monitor", "/disable_monitor","/get_info"]
 
 class AuthMiddleware(BaseMiddleware):
     async def __call__(
@@ -51,6 +52,14 @@ class AuthMiddleware(BaseMiddleware):
                 # либо состояние находится в списке разрешённых состояний
                 if command not in allowed_commands and current_state not in allowed_states:
                     await event.answer("Сначала /login или /register, чтобы пользоваться ботом!")
+                    return
+            else:
+                # Пользователь авторизован, проверяем, не вызывает ли он команду для админов
+                command = event.text.split()[0] if event.text else ""
+
+                # Если команда в списке админских, а пользователь не админ, блокируем
+                if command in allowed_admin_commands and not current_user.is_admin:
+                    await event.answer("У вас нет прав на эту команду (требуются права админа).")
                     return
 
             return await handler(event, data)
