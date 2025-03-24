@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from pdb import run
 from typing import Dict
 
 from telethon import TelegramClient, events
@@ -8,7 +9,7 @@ from telethon.sessions import StringSession
 from db.services.telegram_crud import (
     list_telegram_accounts_with_monitoring,
     create_telegram_message,
-    mark_deleted_messages
+    mark_deleted_messages,
 )
 
 logger = logging.getLogger(__name__)
@@ -19,22 +20,26 @@ load_dotenv()
 
 API_TELETHON_ID = int(os.getenv("API_TELETHON_ID"))
 API_TELETHON_HASH = os.getenv("API_TELETHON_HASH")
-LOGS_GROUP_ID = -1002648817984 
-CHECK_INTERVAL = 10           # раз в 10 секунд проверяем аккаунты
+LOGS_GROUP_ID = -1002648817984
+CHECK_INTERVAL = 10  # раз в 10 секунд проверяем аккаунты
 
 # Глобальный словарь: account_id -> client
 active_clients: Dict[int, TelegramClient] = {}
+
 
 async def run_monitoring():
     """
     Запускается в фоне. Каждые CHECK_INTERVAL секунд перечитывает аккаунты (is_monitoring=true).
     Поднимает недостающие клиенты, отключает те, у кого monitoring выключен.
     """
+    print("✅ run_monitoring стартовал!")
     while True:
+        print("🔁 Проверка аккаунтов...")
         await asyncio.sleep(CHECK_INTERVAL)
 
         # 1. Берём список аккаунтов (dict) из CRUD, где is_monitoring=True
         accounts = list_telegram_accounts_with_monitoring()
+        print(f"👥 Найдено аккаунтов для мониторинга: {len(accounts)}")
 
         # Собираем id в сет для удобства
         current_ids = set(acc["id"] for acc in accounts)
@@ -67,7 +72,9 @@ async def start_client_for_account(acc_dict: dict) -> TelegramClient:
     account_id = acc_dict["id"]
 
     # Инициализируем клиент
-    client = TelegramClient(StringSession(session_str), API_TELETHON_ID, API_TELETHON_HASH)
+    client = TelegramClient(
+        StringSession(session_str), API_TELETHON_ID, API_TELETHON_HASH
+    )
 
     await client.connect()
     if not await client.is_user_authorized():
@@ -105,9 +112,7 @@ async def start_client_for_account(acc_dict: dict) -> TelegramClient:
             try:
                 # forward_messages возвращает Message или список
                 fwd = await client.forward_messages(
-                    LOGS_GROUP_ID,
-                    event.message,
-                    chat_id
+                    LOGS_GROUP_ID, event.message, chat_id
                 )
                 # Если это список, возьмём первый
                 logs_msg_id = fwd.id if hasattr(fwd, "id") else fwd[0].id
@@ -125,7 +130,7 @@ async def start_client_for_account(acc_dict: dict) -> TelegramClient:
             text=text,
             date=date,
             logs_msg_id=logs_msg_id,
-            media_type=media_type
+            media_type=media_type,
         )
 
     @client.on(events.MessageDeleted())
@@ -139,4 +144,3 @@ async def start_client_for_account(acc_dict: dict) -> TelegramClient:
         mark_deleted_messages(account_id, deleted_ids)
 
     return client
-

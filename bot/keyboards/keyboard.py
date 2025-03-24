@@ -10,7 +10,7 @@ def default_menu() -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="Просмотреть ТГ", callback_data="view_tg")
         ],
         [
-            InlineKeyboardButton(text="Руководство", callback_data="management")
+            InlineKeyboardButton(text="Руководство", callback_data="management",url="https://example.com")
         ]
     ])
     return keyboard

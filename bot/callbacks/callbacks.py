@@ -21,3 +21,7 @@ async def callback_take_tg(callback: types.Message, state: FSMContext) -> None:
 async def callback_view_tg(callback: types.Message) -> None:
     await cmd_view_tg(callback.message)
     await callback.answer()
+
+@router.callback_query(F.data == "management")
+async def callback_management(callback: types.CallbackQuery):
+    await callback.answer("Link to managemet!") # TODO: доделать ссылку на руководство!
