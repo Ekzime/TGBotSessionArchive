@@ -42,8 +42,6 @@ def create_telegram_message(
             date=date,
             logs_msg_id=logs_msg_id,
             media_type=media_type,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
         )
 
         try:
@@ -186,8 +184,6 @@ def create_telegram_account(user_id: int,
             session_string=session_string,
             two_factor=two_factor,
             two_factor_pass=_encrypt_two_factor_pass(two_factor_pass),
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
         )
 
         try:

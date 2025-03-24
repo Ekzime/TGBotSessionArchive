@@ -1,14 +1,9 @@
 import os
 from dotenv import load_dotenv
 from cryptography.fernet import Fernet
+from config import settings
 
-
-# Выгрузка ключа шифрования, и проверка на наличие
-load_dotenv()
-FERNET_KEY = os.getenv("FERNET_KEY")
-if not FERNET_KEY:
-    raise ValueError("FERNET_KEY not set in .env")
-
+FERNET_KEY = settings.FERNET_KEY
 fernet = Fernet(FERNET_KEY)
 
 #  Все функции, связанные с шифрованием/дешифрованием.

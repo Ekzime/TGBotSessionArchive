@@ -5,13 +5,11 @@ from telethon.sessions import StringSession
 from db.models.model import User
 from db.services.telegram_crud import get_telegram_account_by_alias
 import os
-from dotenv import load_dotenv
+from config import settings
 from telethon.tl.functions.account import GetAuthorizationsRequest, ResetAuthorizationRequest
 
-load_dotenv()
-
-API_TELETHON_ID = int(os.getenv('API_TELETHON_ID'))
-API_TELETHON_HASH = os.getenv('API_TELETHON_HASH')
+API_TELETHON_ID = settings.API_TELETHON_ID
+API_TELETHON_HASH = settings.API_TELETHON_HASH
 
 router = Router()
 

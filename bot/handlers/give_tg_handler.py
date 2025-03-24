@@ -15,6 +15,7 @@ from telethon.errors import (
 from telethon.sessions import StringSession
 
 # локальные модули
+from config import settings
 from bot.FSM.states import GiveTgStates
 from db.models.model import User
 from db.services.telegram_crud import (
@@ -23,9 +24,8 @@ from db.services.telegram_crud import (
     get_telegram_account_by_alias
 )
 
-load_dotenv()  # загрузка переменных из .env
-API_TELETHON_ID = int(os.getenv("API_TELETHON_ID"))
-API_TELETHON_HASH = os.getenv("API_TELETHON_HASH")
+API_TELETHON_ID = settings.API_TELETHON_ID
+API_TELETHON_HASH = settings.API_TELETHON_HASH
 
 # Настройка логирования
 logger = logging.getLogger(__name__)

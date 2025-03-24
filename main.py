@@ -20,20 +20,24 @@ logger = logging.getLogger(__name__)
 # хранение фоновой задачи
 monitoring_task: asyncio.Task | None = None
 
+
 async def on_startup():
+    """Вызывается автоматически при старта бота"""
     global monitoring_task
     logger.info("Запуск фонового процесса (Telethon)")
     monitoring_task = asyncio.create_task(run_monitoring())
 
+
 async def on_shutdown():
-    """ Этот колбэк будет вызван aiogram автоматически при остановке бота"""
+    """Вызывается автоматически при остановке бота"""
     global monitoring_task
     logger.info("Останновка фонового процесса (Telethon)")
     if monitoring_task:
         monitoring_task.cancel()
         with suppress(asyncio.CancelledError):
             await monitoring_task
-    
+
+    # отключение активных сессий telethon
     for acc_id, client in list(active_clients.items()):
         if client.is_connected():
             await client.disconnect()

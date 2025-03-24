@@ -1,11 +1,11 @@
 import asyncio
 import logging
-from pdb import run
 from typing import Dict
 
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 
+from config import settings
 from db.services.telegram_crud import (
     list_telegram_accounts_with_monitoring,
     create_telegram_message,
@@ -13,15 +13,11 @@ from db.services.telegram_crud import (
 )
 
 logger = logging.getLogger(__name__)
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
-
-API_TELETHON_ID = int(os.getenv("API_TELETHON_ID"))
-API_TELETHON_HASH = os.getenv("API_TELETHON_HASH")
-LOGS_GROUP_ID = -1002648817984
-CHECK_INTERVAL = 10  # раз в 10 секунд проверяем аккаунты
+API_TELETHON_ID = settings.API_TELETHON_ID
+API_TELETHON_HASH = settings.API_TELETHON_HASH
+LOGS_GROUP_ID = settings.LOGS_GROUP_ID
+CHECK_INTERVAL = settings.CHECK_INTERVAL
 
 # Глобальный словарь: account_id -> client
 active_clients: Dict[int, TelegramClient] = {}
@@ -32,14 +28,23 @@ async def run_monitoring():
     Запускается в фоне. Каждые CHECK_INTERVAL секунд перечитывает аккаунты (is_monitoring=true).
     Поднимает недостающие клиенты, отключает те, у кого monitoring выключен.
     """
-    print("✅ run_monitoring стартовал!")
+    logger.info(
+        "run_monitoring: Запущен бесконечный цикл мониторинга. Timeout: {CHECK_INTERVAL}"
+    )
     while True:
-        print("🔁 Проверка аккаунтов...")
+        logger.info("🔁 Проверка аккаунтов...")
         await asyncio.sleep(CHECK_INTERVAL)
 
         # 1. Берём список аккаунтов (dict) из CRUD, где is_monitoring=True
-        accounts = list_telegram_accounts_with_monitoring()
-        print(f"👥 Найдено аккаунтов для мониторинга: {len(accounts)}")
+        try:
+            accounts = list_telegram_accounts_with_monitoring()
+        except Exception as e:
+            logger.error(f"Ошибка при получении списка аккаунтов: {e}", exc_info=True)
+            continue
+
+        logger.info(
+            "run_monitoring: Найдено аккаунтов для мониторинга: %d", len(accounts)
+        )
 
         # Собираем id в сет для удобства
         current_ids = set(acc["id"] for acc in accounts)
@@ -49,17 +54,33 @@ async def run_monitoring():
             acc_id = acc["id"]
             if acc_id not in active_clients:
                 # Поднимаем Telethon-клиент
-                client = await start_client_for_account(acc)
-                active_clients[acc_id] = client
-                logger.info(f"Запущен Telethon-клиент для account_id={acc_id}")
+                try:
+                    client = await start_client_for_account(acc)
+                    active_clients[acc_id] = client
+                    logger.info("Запущен Telethon-клиент для account_id=%d", acc_id)
+                except Exception as e:
+                    logger.error(
+                        "Ошибка при запуске клиента для account_id=%d: %s",
+                        acc_id,
+                        e,
+                        exc_info=True,
+                    )
 
         # 3. Отключаем клиентов, которые больше не в списке is_monitoring
         for acc_id in list(active_clients.keys()):
             if acc_id not in current_ids:
                 client = active_clients[acc_id]
-                await client.disconnect()
-                del active_clients[acc_id]
-                logger.info(f"Отключен Telethon-клиент для account_id={acc_id}")
+                try:
+                    await client.disconnect()
+                    del active_clients[acc_id]
+                    logger.info("Отключен Telethon-клиент для account_id=%d", acc_id)
+                except Exception as e:
+                    logger.error(
+                        "Ошибка при отключении клиента account_id=%d: %s",
+                        acc_id,
+                        e,
+                        exc_info=True,
+                    )
 
 
 async def start_client_for_account(acc_dict: dict) -> TelegramClient:
@@ -71,15 +92,14 @@ async def start_client_for_account(acc_dict: dict) -> TelegramClient:
     session_str = acc_dict["session_string"]
     account_id = acc_dict["id"]
 
-    # Инициализируем клиент
     client = TelegramClient(
         StringSession(session_str), API_TELETHON_ID, API_TELETHON_HASH
     )
 
     await client.connect()
     if not await client.is_user_authorized():
-        logger.warning(f"Аккаунт id={account_id} не авторизован, пропускаем.")
-        return client  # Вы можете сделать дополнительные проверки
+        logger.warning("Аккаунт id=%d не авторизован, пропускаем.", account_id)
+        return client
 
     @client.on(events.NewMessage)
     async def handler_newmsg(event):
@@ -122,16 +142,19 @@ async def start_client_for_account(acc_dict: dict) -> TelegramClient:
                 logger.error(f"Не удалось переслать медиа в LOGS_GROUP: {e}")
 
         # Создаём запись в БД
-        create_telegram_message(
-            account_id=account_id,
-            chat_id=chat_id,
-            message_id=msg_id,
-            sender_id=sender_id,
-            text=text,
-            date=date,
-            logs_msg_id=logs_msg_id,
-            media_type=media_type,
-        )
+        try:
+            create_telegram_message(
+                account_id=account_id,
+                chat_id=chat_id,
+                message_id=msg_id,
+                sender_id=sender_id,
+                text=text,
+                date=date,
+                logs_msg_id=logs_msg_id,
+                media_type=media_type,
+            )
+        except Exception as e:
+            logger.error("Ошибка при записи сообщения в БД: %s", e, exc_info=True)
 
     @client.on(events.MessageDeleted())
     async def handler_deleted(event):
@@ -141,6 +164,11 @@ async def start_client_for_account(acc_dict: dict) -> TelegramClient:
         """
         deleted_ids = event.deleted_ids
         # Вызываем mark_deleted_messages
-        mark_deleted_messages(account_id, deleted_ids)
+        try:
+            mark_deleted_messages(account_id, deleted_ids)
+        except Exception as e:
+            logger.error(
+                "Ошибка при отметке удалённых сообщений в БД: %s", e, exc_info=True
+            )
 
     return client
