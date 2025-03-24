@@ -34,7 +34,7 @@ async def poll_for_new_session(
     alias: str,
     phone: str,
     chat_id: int,
-    max_duration: int = 120
+    max_duration: int = 60
 ):
     """
     Периодически проверяет, не появилось ли больше сессий, чем было при старте (initial_count).

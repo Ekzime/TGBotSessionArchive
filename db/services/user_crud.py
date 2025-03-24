@@ -54,7 +54,7 @@ def login_user(username: str, password: str, telegram_user_id: int, session_hour
     """
     with get_db_session() as db:
         # 1) Проверяем пользователя
-        user = db.query(User).filter(User.username == username).first()  # type: ignore
+        user: User = db.query(User).filter(User.username == username).first()  # type: ignore
         if not user:
             raise ValueError(
                 "Пользователь не найден! Пройдите регистрацию для входа! \n Введите /register для регистрации профиля.")

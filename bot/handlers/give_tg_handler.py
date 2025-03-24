@@ -86,6 +86,25 @@ async def give_rg_code(message: types.Message, state: FSMContext):
     Хендлер, принимающий код подтверждения и пытающийся авторизовать аккаунт.
     """
     code = message.text.strip()
+    # проверка на то, что ввели только integer, длина кода 5
+    if not code.isdigit() or len(code) not in (5,6):
+        data = await state.get_data()
+        attempts = data.get("code_attempts", 0) + 1
+        await state.update_data(code_attempts=attempts)
+        # если количество попыток больше 3, сброс состояния
+        if attempts >= 3:
+            await message.answer(
+                "❗ Превышено количество попыток ввода кода.\n"
+                "Начните процесс заново командой /give_tg."
+            )
+            await state.clear()
+            return
+
+        await message.answer(
+            f"❗ Неверный формат кода ({attempts}/3). Попробуйте ещё раз:"
+        )
+        return
+
     data = await state.get_data()
 
     client = TelegramClient(StringSession(data["session_string"]), API_TELETHON_ID, API_TELETHON_HASH)

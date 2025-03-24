@@ -17,7 +17,7 @@ allowed_states = [
     AuthStates.wait_for_login_password
 ]
 allowed_commands = ["/start", "/login", "/register"]
-allowed_admin_commands = ["/admin_panel", "/cleanup_sessions", "/enable_monitor", "/disable_monitor","/get_info"]
+allowed_admin_commands = ["/get_info", "/admin_help", "/kill_session"]
 
 class AuthMiddleware(BaseMiddleware):
     async def __call__(

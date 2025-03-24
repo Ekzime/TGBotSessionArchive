@@ -1,6 +1,5 @@
 from aiogram import Router, types
 from aiogram.filters import Command
-from sqlalchemy.orm.sync import clear
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from db.models.model import User

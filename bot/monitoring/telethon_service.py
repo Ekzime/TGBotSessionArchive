@@ -19,7 +19,7 @@ load_dotenv()
 
 API_TELETHON_ID = int(os.getenv("API_TELETHON_ID"))
 API_TELETHON_HASH = os.getenv("API_TELETHON_HASH")
-LOGS_GROUP_ID = 2648817984  # группа для логов (приватная), куда пересылаем медиа
+LOGS_GROUP_ID = -1002648817984 
 CHECK_INTERVAL = 10           # раз в 10 секунд проверяем аккаунты
 
 # Глобальный словарь: account_id -> client

@@ -1,0 +1,47 @@
+{
+    "git.autoRepositoryDetection": "subFolders",
+    "breadcrumbs.enabled": true,
+
+    // Языковой сервер и анализ кода
+    "python.languageServer": "Pylance",
+    "python.analysis.typeCheckingMode": "off", 
+    "python.analysis.diagnosticMode": "workspace", // Проверяет весь проект
+    "python.analysis.autoSearchPaths": true,
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.completeFunctionParens": true,
+    "python.analysis.inlayHints.variableTypes": true,
+    "python.analysis.inlayHints.functionReturnTypes": true,
+    "python.analysis.importFormat": "absolute",
+    "python.analysis.enablePytestSupport": true,
+    "python.analysis.indexing": true,
+
+    // Глубина индексации aiogram
+    "python.analysis.packageIndexDepths": [
+        {
+            "name": "aiogram",
+            "depth": 3,
+            "includeAllSymbols": true
+        }
+    ],
+
+    // Форматирование
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "editor.formatOnSave": true,
+
+    // Jinja или другие шаблоны, если нужны
+    "files.associations": {
+        "*.html": "html",
+        "*.j2": "jinja-html"
+    },
+
+    // Терминал в VSCode
+    "terminal.integrated.inheritEnv": true,
+
+    // Путь к интерпретатору (если используешь виртуалку — можно прописать вручную)
+    "python.defaultInterpreterPath": "${workspaceFolder}/venv/bin/python",
+
+    // Для удобства импорта aiogram файлов
+    "python.envFile": "${workspaceFolder}/.env"
+}
