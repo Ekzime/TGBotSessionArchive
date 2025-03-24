@@ -1,11 +1,12 @@
 import asyncio
 import re
 import logging
-import os
+import uuid
 from datetime import datetime, timedelta
 
-from aiogram import Router, types
+from aiogram import Router, types, F
 from aiogram.filters import Command
+from aiogram.types import InlineQuery, InlineQueryResultArticle, InputTextMessageContent
 from telethon import TelegramClient, events
 from telethon.errors import SessionRevokedError, FloodWaitError
 from telethon.sessions import StringSession
@@ -27,6 +28,47 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 router = Router()
+
+
+async def handle_take_tg_logic(user_id: int, alias: str, chat_id: int) -> str:
+    """
+    Универсальная функция для логики "take_tg":
+    - Ищет аккаунт по alias.
+    - Формирует текст для вывода.
+    - Запускает фоновую прослушку кода и проверку новых сессий.
+    - Возвращает строку, которую вызывающий код может отправить пользователю.
+    """
+
+    account = get_telegram_account_by_alias(user_id=user_id, alias=alias)
+    if not account:
+        return "Аккаунт не найден, проверьте alias и попробуйте заново."
+
+    # Формируем текст
+    if account.get("two_factor"):
+        msg_text = (
+            f"✅ Вот номер телефона, привязанный к аккаунту <b>{alias}</b>:\n"
+            f"📞 <code>{account['phone']}</code>\n"
+            f"pass: <code>{account['two_factor_pass']}</code>\n\n"
+            "Введите этот номер в Telegram."
+        )
+    else:
+        msg_text = (
+            f"✅ Вот номер телефона, привязанный к аккаунту <b>{alias}</b>:\n"
+            f"📞 <code>{account['phone']}</code>\n\n"
+            "Введите этот номер в Telegram."
+        )
+
+    # Запускаем фоновую задачу для прослушки кода и проверки новых сессий
+    asyncio.create_task(
+        listen_for_code_and_check_session(
+            string_session=account["session_string"],
+            chat_id=chat_id,
+            alias=alias,
+            phone=account["phone"],
+        )
+    )
+
+    return msg_text
 
 
 async def poll_for_new_session(
@@ -185,51 +227,25 @@ async def listen_for_code_and_check_session(
 
 
 @router.message(Command("take_tg"))
-async def cmd_take_tg(message: types.Message, current_user: User):
+async def cmd_take_tg(message: types.Message, current_user: int, alias: str = None):
     """
-    Выводит номер телефона, привязанный к аккаунту, и запускает фоновый процесс
-    для прослушивания чата и проверки новых сессий.
+    Вызов универсальной функции, отправляем результат пользователю.
+    Пример: /take_tg my_account
     """
-    alias = (
-        message.text.split(maxsplit=1)[1].strip()
-        if len(message.text.split()) > 1
-        else None
+    # Если alias == None, то вызов происходит из хендлера, если alias есть, вызов идет из callback
+    if alias is None:
+        parts = message.text.split(maxsplit=1)
+        if len(parts) < 2:
+            await message.answer(
+                "Введите alias аккаунта после команды. Пример: /take_tg <i>my_account</i>",
+                parse_mode="HTML",
+            )
+            return
+        alias = parts[1].strip()
+
+    # Универсальная логика
+    result_text = await handle_take_tg_logic(
+        user_id=current_user, alias=alias, chat_id=message.chat.id
     )
-    if not alias:
-        await message.answer(
-            "Введите alias аккаунта после команды. Пример: /take_tg <i>my_account</i>",
-            parse_mode="HTML",
-        )
-        return
 
-    account = get_telegram_account_by_alias(user_id=current_user.id, alias=alias)
-    if not account:
-        await message.answer("Аккаунт не найден, проверьте alias и попробуйте заново.")
-        return
-
-    # Выводим информацию об аккаунте
-    if account.get("two_factor"):
-        msg_text = (
-            f"✅ Вот номер телефона, привязанный к аккаунту <b>{alias}</b>:\n"
-            f"📞 <code>{account['phone']}</code>\n"
-            f"pass: <code>{account['two_factor_pass']}</code>\n\n"
-            "Введите этот номер в Telegram."
-        )
-    else:
-        msg_text = (
-            f"✅ Вот номер телефона, привязанный к аккаунту <code>{alias}</code>:\n"
-            f"📞 <code>{account['phone']}</code>\n\n"
-            "Введите этот номер в Telegram."
-        )
-
-    await message.answer(msg_text, parse_mode="HTML")
-
-    # Запускаем фоновую задачу для прослушки кода и проверки новых сессий
-    asyncio.create_task(
-        listen_for_code_and_check_session(
-            string_session=account["session_string"],
-            chat_id=message.chat.id,
-            alias=alias,
-            phone=account["phone"],
-        )
-    )
+    await message.answer(result_text, parse_mode="HTML")

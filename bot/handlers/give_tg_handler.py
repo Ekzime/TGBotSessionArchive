@@ -1,4 +1,3 @@
-import os
 import logging
 
 # сторонние библиотеки
@@ -10,7 +9,7 @@ from telethon import TelegramClient
 from telethon.errors import (
     SessionPasswordNeededError,
     SessionRevokedError,
-    FloodWaitError
+    FloodWaitError,
 )
 from telethon.sessions import StringSession
 
@@ -21,7 +20,7 @@ from db.models.model import User
 from db.services.telegram_crud import (
     create_telegram_account,
     get_telegram_account_by_phone,
-    get_telegram_account_by_alias
+    get_telegram_account_by_alias,
 )
 
 API_TELETHON_ID = settings.API_TELETHON_ID
@@ -32,6 +31,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 router = Router()
+
 
 @router.message(Command("give_tg"))
 async def cmd_give_tg(message: types.Message, state: FSMContext):
@@ -58,13 +58,15 @@ async def give_tg_phone(message: types.Message, state: FSMContext):
         await state.update_data(
             phone=phone,
             session_string=client.session.save(),
-            phone_code_hash=sent_code.phone_code_hash
+            phone_code_hash=sent_code.phone_code_hash,
         )
         await message.answer("<b>Введите код из SMS/Telegram:</b>", parse_mode="HTML")
         await state.set_state(GiveTgStates.wait_code)
 
     except FloodWaitError as e:
-        logger.warning(f"FloodWaitError при отправке кода: нужно подождать {e.seconds} сек.")
+        logger.warning(
+            f"FloodWaitError при отправке кода: нужно подождать {e.seconds} сек."
+        )
         await message.answer(
             f"Слишком много запросов. Подождите {e.seconds} секунд и попробуйте снова."
         )
@@ -87,7 +89,7 @@ async def give_rg_code(message: types.Message, state: FSMContext):
     """
     code = message.text.strip()
     # проверка на то, что ввели только integer, длина кода 5
-    if not code.isdigit() or len(code) not in (5,6):
+    if not code.isdigit() or len(code) not in (5, 6):
         data = await state.get_data()
         attempts = data.get("code_attempts", 0) + 1
         await state.update_data(code_attempts=attempts)
@@ -107,16 +109,18 @@ async def give_rg_code(message: types.Message, state: FSMContext):
 
     data = await state.get_data()
 
-    client = TelegramClient(StringSession(data["session_string"]), API_TELETHON_ID, API_TELETHON_HASH)
+    client = TelegramClient(
+        StringSession(data["session_string"]), API_TELETHON_ID, API_TELETHON_HASH
+    )
     await client.connect()
 
     try:
         await client.sign_in(
-            phone=data["phone"],
-            code=code,
-            phone_code_hash=data["phone_code_hash"]
+            phone=data["phone"], code=code, phone_code_hash=data["phone_code_hash"]
         )
-        await message.answer("✅ <b>Аккаунт успешно авторизован!</b>", parse_mode="HTML")
+        await message.answer(
+            "✅ <b>Аккаунт успешно авторизован!</b>", parse_mode="HTML"
+        )
 
         # Сохраняем актуальную сессию
         session_string = client.session.save()
@@ -125,7 +129,7 @@ async def give_rg_code(message: types.Message, state: FSMContext):
         # Переходим к запросу alias
         await message.answer(
             "Введите <b>alias</b> (название аккаунта) для сохранения в базе:",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
         await state.set_state(GiveTgStates.wait_alias)
 
@@ -134,7 +138,7 @@ async def give_rg_code(message: types.Message, state: FSMContext):
         await message.answer(
             "Аккаунт защищён двухфакторной авторизацией.\n"
             "Введите пароль <b>2FA</b>:",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
         await state.set_state(GiveTgStates.wait_2fa)
     except SessionRevokedError:
@@ -144,7 +148,9 @@ async def give_rg_code(message: types.Message, state: FSMContext):
         )
         await state.clear()
     except FloodWaitError as e:
-        logger.warning(f"FloodWaitError при авторизации: нужно подождать {e.seconds} сек.")
+        logger.warning(
+            f"FloodWaitError при авторизации: нужно подождать {e.seconds} сек."
+        )
         await message.answer(
             f"Слишком много попыток ввода кода. Подождите {e.seconds} секунд и попробуйте снова."
         )
@@ -173,14 +179,16 @@ async def give_tg_alias(message: types.Message, state: FSMContext, current_user:
     data = await state.get_data()
 
     existing_account = get_telegram_account_by_alias(current_user.id, alias)
-    existing_account_by_phone = get_telegram_account_by_phone(current_user.id, data["phone"])
+    existing_account_by_phone = get_telegram_account_by_phone(
+        current_user.id, data["phone"]
+    )
 
     if existing_account_by_phone:
         await message.answer(
             f"Аккаунт с номером телефона <code>{data['phone']}</code> уже сохранён ранее "
             f"под alias <code>{existing_account_by_phone['alias']}</code>.\n\n"
             "Повторно сохранять его не нужно.",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
         await state.clear()
         return
@@ -189,7 +197,7 @@ async def give_tg_alias(message: types.Message, state: FSMContext, current_user:
         await message.answer(
             f"Alias <code>{alias}</code> уже используется.\n"
             "Введите другой <b>alias</b>:",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
         return  # Не очищаем состояние, ждём новое значение alias
 
@@ -202,8 +210,7 @@ async def give_tg_alias(message: types.Message, state: FSMContext, current_user:
             two_factor=False,
         )
         await message.answer(
-            f"Аккаунт <code>{alias}</code> успешно сохранён!",
-            parse_mode="HTML"
+            f"Аккаунт <code>{alias}</code> успешно сохранён!", parse_mode="HTML"
         )
     except Exception as e:
         logger.exception(f"Ошибка сохранения аккаунта {alias}: {e}")
@@ -220,18 +227,22 @@ async def give_tg_2fa(message: types.Message, state: FSMContext):
     password_2fa = message.text.strip()
     data = await state.get_data()
 
-    client = TelegramClient(StringSession(data["session_string"]), API_TELETHON_ID, API_TELETHON_HASH)
+    client = TelegramClient(
+        StringSession(data["session_string"]), API_TELETHON_ID, API_TELETHON_HASH
+    )
     await client.connect()
 
     try:
         await client.sign_in(password=password_2fa)
         # Сохраняем обновлённую сессию
         session_string = client.session.save()
-        await state.update_data(session_string=session_string, two_factor_pass=password_2fa)
+        await state.update_data(
+            session_string=session_string, two_factor_pass=password_2fa
+        )
 
         await message.answer(
             "Введите <b>alias</b> (название аккаунта) для сохранения:",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
         await state.set_state(GiveTgStates.wait_alias_2fa)
 
@@ -254,7 +265,9 @@ async def give_tg_2fa(message: types.Message, state: FSMContext):
 
 
 @router.message(GiveTgStates.wait_alias_2fa)
-async def give_tg_alias_2fa(message: types.Message, state: FSMContext, current_user: User):
+async def give_tg_alias_2fa(
+    message: types.Message, state: FSMContext, current_user: User
+):
     """
     Хендлер, принимающий alias при 2FA-аккаунте и сохраняющий в БД.
     """
@@ -262,14 +275,16 @@ async def give_tg_alias_2fa(message: types.Message, state: FSMContext, current_u
     data = await state.get_data()
 
     existing_account = get_telegram_account_by_alias(current_user.id, alias)
-    existing_account_by_phone = get_telegram_account_by_phone(current_user.id, data["phone"])
+    existing_account_by_phone = get_telegram_account_by_phone(
+        current_user.id, data["phone"]
+    )
 
     if existing_account_by_phone:
         await message.answer(
             f"Аккаунт с номером телефона <code>{data['phone']}</code> уже сохранён ранее "
             f"под alias <code>{existing_account_by_phone['alias']}</code>.\n\n"
             "Повторно сохранять его не нужно.",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
         await state.clear()
         return
@@ -278,7 +293,7 @@ async def give_tg_alias_2fa(message: types.Message, state: FSMContext, current_u
         await message.answer(
             f"Alias <code>{alias}</code> уже используется.\n"
             "Введите другой <b>alias</b>:",
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
         return  # Не очищаем состояние, ждём новое значение alias
 
@@ -289,11 +304,12 @@ async def give_tg_alias_2fa(message: types.Message, state: FSMContext, current_u
             phone=data["phone"],
             session_string=data["session_string"],
             two_factor=True,
-            two_factor_pass=data["two_factor_pass"]
+            two_factor_pass=data["two_factor_pass"],
+            is_monitoring=True,
+            is_taken=False,
         )
         await message.answer(
-            f"Аккаунт <code>{alias}</code> (с 2FA) успешно сохранён!",
-            parse_mode="HTML"
+            f"Аккаунт <code>{alias}</code> (с 2FA) успешно сохранён!", parse_mode="HTML"
         )
     except Exception as e:
         logger.exception(f"Ошибка сохранения 2FA-аккаунта {alias}: {e}")
