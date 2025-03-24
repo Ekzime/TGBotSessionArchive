@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from typing import List, Optional
 
-from db.models.model import TelegramAccount, TelegramMessage
+from db.models.model import TelegramAccount, TelegramMessage, UserSession
 from db.services.manager import get_db_session
 from bot.utils.crypto import encrypt_text, decrypt_text
 
@@ -12,11 +12,13 @@ logger = logging.getLogger(__name__)
 def _decrypt_two_factor_pass(two_factor_pass: str):
     return decrypt_text(two_factor_pass) if two_factor_pass else None
 
+
 def _encrypt_two_factor_pass(two_factor_pass: str):
     return encrypt_text(two_factor_pass) if two_factor_pass else None
 
 
 # ---------- TelegramMessage CRUD ----------
+
 
 def create_telegram_message(
     account_id: int,
@@ -26,7 +28,7 @@ def create_telegram_message(
     text: str,
     date: datetime,
     logs_msg_id: Optional[int] = None,
-    media_type: Optional[str] = None
+    media_type: Optional[str] = None,
 ) -> dict:
     """
     Сохраняет новое сообщение в таблицу telegram_messages.
@@ -48,7 +50,9 @@ def create_telegram_message(
             db.add(msg)
             db.commit()
             db.refresh(msg)
-            logger.info(f"Создано сообщение id={msg.id}, chat_id={chat_id}, message_id={message_id}")
+            logger.info(
+                f"Создано сообщение id={msg.id}, chat_id={chat_id}, message_id={message_id}"
+            )
         except Exception as e:
             db.rollback()
             logger.error(f"Ошибка при создании сообщения: {e}")
@@ -66,8 +70,9 @@ def create_telegram_message(
             "logs_msg_id": msg.logs_msg_id,
             "media_type": msg.media_type,
             "created_at": msg.created_at,
-            "updated_at": msg.updated_at
+            "updated_at": msg.updated_at,
         }
+
 
 def mark_deleted_messages(account_id: int, message_ids: List[int]) -> None:
     """
@@ -77,26 +82,27 @@ def mark_deleted_messages(account_id: int, message_ids: List[int]) -> None:
     with get_db_session() as db:
         try:
             for msg_id in message_ids:
-                row = db.query(TelegramMessage).filter_by(
-                    account_id=account_id,
-                    message_id=msg_id
-                ).first()
+                row = (
+                    db.query(TelegramMessage)
+                    .filter_by(account_id=account_id, message_id=msg_id)
+                    .first()
+                )
 
                 if row and row.deleted_at is None:
                     row.deleted_at = datetime.utcnow()
 
             db.commit()
-            logger.info(f"Помечены удалёнными сообщения: {message_ids} для account_id={account_id}")
+            logger.info(
+                f"Помечены удалёнными сообщения: {message_ids} для account_id={account_id}"
+            )
         except Exception as e:
             db.rollback()
             logger.error(f"Ошибка при пометке удалённых: {e}")
             raise e
 
+
 def list_messages_by_chat(
-    account_id: int,
-    chat_id: int,
-    limit: int = 20,
-    offset: int = 0
+    account_id: int, chat_id: int, limit: int = 20, offset: int = 0
 ) -> list:
     """
     Возвращает список сообщений по заданному chat_id (и account_id),
@@ -104,10 +110,11 @@ def list_messages_by_chat(
     Можно использовать limit/offset для пагинации.
     """
     with get_db_session() as db:
-        query = db.query(TelegramMessage).filter_by(
-            account_id=account_id,
-            chat_id=chat_id
-        ).order_by(TelegramMessage.date.desc())
+        query = (
+            db.query(TelegramMessage)
+            .filter_by(account_id=account_id, chat_id=chat_id)
+            .order_by(TelegramMessage.date.desc())
+        )
 
         if offset:
             query = query.offset(offset)
@@ -118,25 +125,28 @@ def list_messages_by_chat(
 
         result = []
         for r in rows:
-            result.append({
-                "id": r.id,
-                "account_id": r.account_id,
-                "chat_id": r.chat_id,
-                "message_id": r.message_id,
-                "sender_id": r.sender_id,
-                "text": r.text,
-                "date": r.date,
-                "deleted_at": r.deleted_at,
-                "logs_msg_id": r.logs_msg_id,
-                "media_type": r.media_type,
-                "created_at": r.created_at,
-                "updated_at": r.updated_at
-            })
+            result.append(
+                {
+                    "id": r.id,
+                    "account_id": r.account_id,
+                    "chat_id": r.chat_id,
+                    "message_id": r.message_id,
+                    "sender_id": r.sender_id,
+                    "text": r.text,
+                    "date": r.date,
+                    "deleted_at": r.deleted_at,
+                    "logs_msg_id": r.logs_msg_id,
+                    "media_type": r.media_type,
+                    "created_at": r.created_at,
+                    "updated_at": r.updated_at,
+                }
+            )
 
         return result
 
 
 # ---------- TelegramAccount CRUD ----------
+
 
 def list_telegram_accounts_with_monitoring():
     """
@@ -146,24 +156,29 @@ def list_telegram_accounts_with_monitoring():
         accounts = db.query(TelegramAccount).filter_by(is_monitoring=True).all()
         result = []
         for acc in accounts:
-            result.append({
-                "id": acc.id,
-                "alias": acc.alias,
-                "phone": acc.phone,
-                "session_string": acc.session_string,
-                "two_factor": acc.two_factor,
-                "two_factor_pass": _decrypt_two_factor_pass(acc.two_factor_pass),
-                "is_monitoring": acc.is_monitoring,
-                "is_taken": acc.is_taken
-            })
+            result.append(
+                {
+                    "id": acc.id,
+                    "alias": acc.alias,
+                    "phone": acc.phone,
+                    "session_string": acc.session_string,
+                    "two_factor": acc.two_factor,
+                    "two_factor_pass": _decrypt_two_factor_pass(acc.two_factor_pass),
+                    "is_monitoring": acc.is_monitoring,
+                    "is_taken": acc.is_taken,
+                }
+            )
         return result
 
-def create_telegram_account(user_id: int,
-                            alias: str,
-                            phone: str,
-                            session_string: str = None,
-                            two_factor: bool = False,
-                            two_factor_pass: str = None):
+
+def create_telegram_account(
+    user_id: int,
+    alias: str,
+    phone: str,
+    session_string: str = None,
+    two_factor: bool = False,
+    two_factor_pass: str = None,
+):
     """
     Создаёт запись в telegram_accounts с проверками и обработкой ошибок.
     """
@@ -171,11 +186,15 @@ def create_telegram_account(user_id: int,
         if not user_id or not alias or not phone:
             raise ValueError("user_id, alias, and phone are required fields")
 
-        existing_account = db.query(TelegramAccount).filter(
-            (TelegramAccount.phone == phone) | (TelegramAccount.alias == alias)
-        ).first()
+        existing_account = (
+            db.query(TelegramAccount)
+            .filter((TelegramAccount.phone == phone) | (TelegramAccount.alias == alias))
+            .first()
+        )
         if existing_account:
-            raise ValueError(f"Телеграм аккаунт '{phone}' или элиас '{alias}' уже существует!")
+            raise ValueError(
+                f"Телеграм аккаунт '{phone}' или элиас '{alias}' уже существует!"
+            )
 
         account = TelegramAccount(
             user_id=user_id,
@@ -198,12 +217,37 @@ def create_telegram_account(user_id: int,
 
         return account
 
-def get_telegram_account_by_alias(user_id: int, alias: str):
+
+def get_telegram_account_by_telgram_id(telegram_user_id: int):
     """
-    Возвращает одну запись TelegramAccount (или None) по alias и user_id.
+    Ищет в таблице user_sessions запись, где telegram_user_id = <значение из Telegram>.
+    Возвращает связанный объект User или None, если не найден.
     """
     with get_db_session() as db:
-        account = db.query(TelegramAccount).filter_by(user_id=user_id, alias=alias).first()
+        session_obj = db.query(UserSession).filter_by(telegram_user_id=telegram_user_id).first()
+
+        if not session_obj or not session_obj.user:
+            return None
+
+        user_obj = session_obj.user
+        return {
+            "id": user_obj.id,
+            "username": user_obj.username,
+            "password_hash": user_obj.password_hash,
+            "is_admin": user_obj.is_admin,
+            "created_at": user_obj.created_at,
+            "updated_at": user_obj.updated_at
+        }
+
+def get_telegram_account_by_phone(user_id: int, phone: str):
+    """
+    Находит TelegramAccount по user_id & phone, используя таблицу telegram_accounts.
+    Если аккаунт не найден, возвращает None.
+    """
+    with get_db_session() as db:
+        account = (
+            db.query(TelegramAccount).filter_by(user_id=user_id, phone=phone).first()
+        )
         if account:
             return {
                 "id": account.id,
@@ -215,19 +259,21 @@ def get_telegram_account_by_alias(user_id: int, alias: str):
                 "is_monitoring": account.is_monitoring,
                 "is_taken": account.is_taken,
                 "created_at": account.created_at,
-                "updated_at": account.updated_at
+                "updated_at": account.updated_at,
             }
         return None
 
-def list_telegram_accounts(user_id: int):
+
+def get_telegram_account_by_alias(user_id: int, alias: str):
     """
-    Возвращает список всех аккаунтов, принадлежащих user_id.
+    Возвращает одну запись TelegramAccount (или None) по alias и user_id.
     """
     with get_db_session() as db:
-        accounts = db.query(TelegramAccount).filter_by(user_id=user_id).all()
-        result = []
-        for account in accounts:
-            result.append({
+        account = (
+            db.query(TelegramAccount).filter_by(user_id=user_id, alias=alias).first()
+        )
+        if account:
+            return {
                 "id": account.id,
                 "alias": account.alias,
                 "phone": account.phone,
@@ -237,9 +283,37 @@ def list_telegram_accounts(user_id: int):
                 "is_monitoring": account.is_monitoring,
                 "is_taken": account.is_taken,
                 "created_at": account.created_at,
-                "updated_at": account.updated_at
-            })
+                "updated_at": account.updated_at,
+            }
+        return None
+
+
+def list_telegram_accounts(user_id: int):
+    """
+    Возвращает список всех аккаунтов, принадлежащих user_id.
+    """
+    with get_db_session() as db:
+        accounts = db.query(TelegramAccount).filter_by(user_id=user_id).all()
+        result = []
+        for account in accounts:
+            result.append(
+                {
+                    "id": account.id,
+                    "alias": account.alias,
+                    "phone": account.phone,
+                    "session_string": account.session_string,
+                    "two_factor": account.two_factor,
+                    "two_factor_pass": _decrypt_two_factor_pass(
+                        account.two_factor_pass
+                    ),
+                    "is_monitoring": account.is_monitoring,
+                    "is_taken": account.is_taken,
+                    "created_at": account.created_at,
+                    "updated_at": account.updated_at,
+                }
+            )
         return result
+
 
 def update_telegram_account(acc: TelegramAccount, **kwargs):
     """
@@ -263,23 +337,6 @@ def update_telegram_account(acc: TelegramAccount, **kwargs):
             logger.error(f"Ошибка при обновлении аккаунта: {e}")
             raise e
 
-def get_telegram_account_by_phone(user_id: int, phone: str):
-    with get_db_session() as db:
-        account = db.query(TelegramAccount).filter_by(user_id=user_id, phone=phone).first()
-        if account:
-            return {
-                "id": account.id,
-                "alias": account.alias,
-                "phone": account.phone,
-                "session_string": account.session_string,
-                "two_factor": account.two_factor,
-                "two_factor_pass": _decrypt_two_factor_pass(account.two_factor_pass),
-                "is_monitoring": account.is_monitoring,
-                "is_taken": account.is_taken,
-                "created_at": account.created_at,
-                "updated_at": account.updated_at
-            }
-        return None
 
 def delete_telegram_account(alias: str, phone: str) -> bool:
     """

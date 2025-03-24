@@ -1,22 +1,24 @@
-from pydantic import BaseSettings, Field, ValidationError
+from pydantic_settings import BaseSettings
+from pydantic import Field, ValidationError
 import logging
 
 logger = logging.getLogger(__name__)
 
+# централизированое управление переменными
 class Settings(BaseSettings):
-    TELEGRAM_BOT_API = Field(...,env="TELEGRAM_BOT_API")
+    TELEGRAM_BOT_API: str = Field(..., env="TELEGRAM_BOT_API")
     API_TELETHON_ID: int = Field(..., env="API_TELETHON_ID")
     API_TELETHON_HASH: str = Field(..., env="API_TELETHON_HASH")
 
-    SQLALCHEMY_DATABASE_URL = Field(...,env="SQLALCHEMY_DATABASE_URL")
-    FERNET_KEY = Field(...,env="FERNET_KEY")
-    
+    SQLALCHEMY_DATABASE_URL: str = Field(..., env="SQLALCHEMY_DATABASE_URL")
+    FERNET_KEY: str = Field(..., env="FERNET_KEY")
+
+    # временные типы
     LOGS_GROUP_ID: int = Field(..., env="LOGS_GROUP_ID")
     CHECK_INTERVAL: int = Field(..., env="CHECK_INTERVAL")
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+
 
 try:
     settings = Settings()

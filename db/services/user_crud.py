@@ -117,3 +117,5 @@ def get_current_user(db: Session,telegram_user_id: int):
         return None
 
     return session_obj.user  # т.к. user = relationship("User", back_populates="sessions")
+
+
