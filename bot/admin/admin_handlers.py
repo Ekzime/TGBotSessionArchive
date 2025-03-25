@@ -212,3 +212,12 @@ async def get_id_for_new_admin(message: types.Message, state: FSMContext):
         await state.clear()
         return
     await state.clear()
+
+@router.message(Command('delete_admin'))
+async def cmd_delete_admin(message: types.Message, state: FSMContext):
+    await message.answer(f"<b>Введите имя админа для снятия прав:</b>")
+    await state.set_state(AdminStates.wait_ids)
+
+@router.message(AdminStates.wait_ids)
+async def get_admin_name_for_delete(message: types.Message, state: FSMContext):
+    await 

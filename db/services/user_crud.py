@@ -11,6 +11,9 @@ from db.services.manager import get_db_session
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+def delete_admin(username:str):
+    pass
+        
 
 def set_new_admin(username: str):
     with get_db_session() as db:
