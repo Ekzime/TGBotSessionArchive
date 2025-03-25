@@ -14,17 +14,26 @@ allowed_states = [
     AuthStates.wait_for_pass,
     AuthStates.wait_for_pass_confirm,
     AuthStates.wait_for_login_username,
-    AuthStates.wait_for_login_password
+    AuthStates.wait_for_login_password,
 ]
 allowed_commands = ["/start", "/login", "/register"]
-allowed_admin_commands = ["/get_info", "/admin_help", "/kill_session"]
+allowed_admin_commands = [
+    "/get_info",
+    "/bind",
+    "/kill_session",
+    "/settings",
+    "/timeout",
+    "/help_admin",
+    "/set_admin",
+]
+
 
 class AuthMiddleware(BaseMiddleware):
     async def __call__(
-            self,
-            handler: Callable[[Message, Dict[str, Any]], Awaitable[Any]],
-            event: Message,
-            data: Dict[str, Any]
+        self,
+        handler: Callable[[Message, Dict[str, Any]], Awaitable[Any]],
+        event: Message,
+        data: Dict[str, Any],
     ) -> Any:
         # Создание новой сессии с базой данных при каждом запросе
         db = SessionLocal()
@@ -50,8 +59,13 @@ class AuthMiddleware(BaseMiddleware):
 
                 # Проверяем, является ли команда разрешённой для неавторизованных пользователей
                 # либо состояние находится в списке разрешённых состояний
-                if command not in allowed_commands and current_state not in allowed_states:
-                    await event.answer("Сначала /login или /register, чтобы пользоваться ботом!")
+                if (
+                    command not in allowed_commands
+                    and current_state not in allowed_states
+                ):
+                    await event.answer(
+                        "Сначала /login или /register, чтобы пользоваться ботом!"
+                    )
                     return
             else:
                 # Пользователь авторизован, проверяем, не вызывает ли он команду для админов
@@ -59,7 +73,9 @@ class AuthMiddleware(BaseMiddleware):
 
                 # Если команда в списке админских, а пользователь не админ, блокируем
                 if command in allowed_admin_commands and not current_user.is_admin:
-                    await event.answer("У вас нет прав на эту команду (требуются права админа).")
+                    await event.answer(
+                        "У вас нет прав на эту команду (требуются права админа)."
+                    )
                     return
 
             return await handler(event, data)

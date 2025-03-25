@@ -7,9 +7,14 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from bot.monitoring.telethon_service import run_monitoring, active_clients
 from bot.core.bot_instance import bot
 from bot import root_router
+from db.services.user_crud import create_admin_account
+from config import settings
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+ADMIN_USERNAME = settings.ADMIN_USERNAME
+ADMIN_PASSWORD = settings.ADMIN_PASSWORD
 
 # хранение фоновой задачи
 monitoring_task: asyncio.Task | None = None
@@ -21,7 +26,6 @@ if sys.platform.startswith("win"):
 async def on_startup():
     """Вызывается автоматически при старта бота"""
     global monitoring_task
-    logger.info("Запуск фонового процесса (Telethon)")
     monitoring_task = asyncio.create_task(run_monitoring())
 
 
@@ -42,16 +46,25 @@ async def on_shutdown():
     logger.info("Все Telethon-клиенты отключены")
 
 
+async def init_admin():
+    create_admin_account(
+        username=ADMIN_USERNAME, password=ADMIN_PASSWORD, is_admin=True
+    )
+    logger.info(
+        f"Создан профиль админа: username: {ADMIN_USERNAME}, password={ADMIN_PASSWORD}"
+    )
+
+
 async def main():
     dp = Dispatcher(storage=MemoryStorage())
     dp.include_router(root_router)
 
-    # Регистрируем колбэки старта и остановки фонового процесса мониторинга
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
 
     logger.info("Routers are connected.")
 
+    await init_admin()
     await on_startup()
     await dp.start_polling(bot)
 
@@ -60,4 +73,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.info("🛑 Bot stopping by Ctrl+C")
+        logger.info("Bot stopping by Ctrl+C")

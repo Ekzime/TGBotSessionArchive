@@ -106,12 +106,18 @@ async def login_password(message: types.Message, state: FSMContext):
 
     db = SessionLocal()
     try:
-        session_obj = login_user(
+        session_obj: dict = login_user(
             username, password, telegram_user_id=message.from_user.id
         )
-        await message.answer(
-            f"Вы успешно вошли в аккаунт! Нажмите /start для ознакомления."
-        )
+        if session_obj["is_admin"]:
+            await message.answer(
+                f"Вы успешно вошли в аккаунт c правами <b>администратора</b>! Нажмите /start для ознакомления.",
+                parse_mode="HTML",
+            )
+        else:
+            await message.answer(
+                f"Вы успешно вошли в аккаунт! Нажмите /start для ознакомления."
+            )
     except ValueError as e:
         await message.answer(f"Ошибка авторизации: {e}")
     except Exception as e:

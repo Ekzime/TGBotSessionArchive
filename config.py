@@ -4,6 +4,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 # централизированое управление переменными
 class Settings(BaseSettings):
     TELEGRAM_BOT_API: str = Field(..., env="TELEGRAM_BOT_API")
@@ -12,6 +13,9 @@ class Settings(BaseSettings):
 
     SQLALCHEMY_DATABASE_URL: str = Field(..., env="SQLALCHEMY_DATABASE_URL")
     FERNET_KEY: str = Field(..., env="FERNET_KEY")
+
+    ADMIN_USERNAME: str = Field(..., env="ADMIN_USERNAME")
+    ADMIN_PASSWORD: str = Field(..., env="ADMIN_PASSWORD")
 
     # временные типы
     LOGS_GROUP_ID: int = Field(..., env="LOGS_GROUP_ID")
