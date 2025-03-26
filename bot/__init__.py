@@ -8,6 +8,7 @@ from bot.handlers.info_handlers import router as info_chat_router
 from bot.admin.admin_handlers import router as admin_router
 from bot.middlewares.auth_middleware import AuthMiddleware
 from bot.callbacks.callbacks import router as callback_router
+from bot.callbacks.viewscallback import router as callback_view_user_router
 
 
 root_router = Router()
@@ -23,3 +24,4 @@ root_router.include_router(info_chat_router)
 root_router.include_router(admin_router)
 
 root_router.include_router(callback_router)
+root_router.include_router(callback_view_user_router)

@@ -25,6 +25,7 @@ allowed_admin_commands = [
     "/timeout",
     "/help_admin",
     "/set_admin",
+    "/view_users"
 ]
 
 

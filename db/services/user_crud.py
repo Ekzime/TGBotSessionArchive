@@ -11,9 +11,38 @@ from db.services.manager import get_db_session
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-def delete_admin(username:str):
-    pass
-        
+
+def get_all_users():
+    with get_db_session() as db:
+        all_users = db.query(User).all()
+        result = []
+        if not all_users:
+            logger.info("get_all_users: пользователи не найдены!")
+            return
+        for user in all_users:
+            result.append(
+                {"id": user.id, "username": user.username, "is_admin": user.is_admin}
+            )
+        return result
+
+
+def delete_admin(username: str):
+    """
+    Меняет флаг is_admin = True на is_admin = False
+    """
+    with get_db_session() as db:
+        admin_user = db.query(User).filter_by(username=username).first()
+        if not admin_user:
+            logger.info(f"delete_admin: Пользователь не найден!")
+            return
+        if not admin_user.is_admin:
+            logger.info(f"delete_admin: {username} не имеет прав!")
+            return
+        admin_user.is_admin = False
+        logger.info(f"delete_admin: {username} лишен прав администратора!")
+
+    return True
+
 
 def set_new_admin(username: str):
     with get_db_session() as db:
@@ -55,13 +84,15 @@ def register_user(username: str, password: str, is_admin: bool = False) -> dict:
         # проверка, нет ли такого пользователя в БД
         existing = db.query(User).filter(User.username == username).first()
         if existing:
-            raise ValueError("Пользователь с таким именем уже существует!")
+            logger.info("Пользователь с таким именем уже существует!")
+            return
 
         # проверка на длину пароля
         if len(password) < 4:
-            raise ValueError(
+            logger.info(
                 "Пароль не может быть меньше 4 символов! Введите /register, и попробуйте заново"
             )
+            return
 
         # хеширование пароля
         hash_password = bcrypt.hash(password)

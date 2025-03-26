@@ -29,5 +29,8 @@ class TimeoutStates(StatesGroup):
     wait_timeout = State()
 
 
-class AdminStates(StatesGroup):
-    wait_ids = State()
+class AdminIdsStates(StatesGroup):
+    wait_id = State()
+
+class AdminNameStates(StatesGroup):
+    wait_name = State()
