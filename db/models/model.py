@@ -123,24 +123,3 @@ class TelegramMessage(Base, TimestampMixin):
 
     def __repr__(self):
         return f"<TelegramMessage(id={self.id}, chat_id={self.chat_id}, message_id={self.message_id})>"
-
-
-class BotSettings(Base):
-    """Таблица для хранения ключ-значение настроек бота."""
-
-    __tablename__ = "bot_settings"
-
-    setting_key = Column(String(100), primary_key=True)
-    setting_value = Column(String(255), nullable=False)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False,
-    )
-
-    def __repr__(self):
-        return f"<BotSettings(key='{self.setting_key}', value='{self.setting_value}')>"

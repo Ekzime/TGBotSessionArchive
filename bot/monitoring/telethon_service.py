@@ -1,7 +1,7 @@
 import os
 import asyncio
 import logging
-from typing import Dict, Optional
+from typing import Dict
 
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession

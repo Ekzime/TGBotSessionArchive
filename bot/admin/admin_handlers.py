@@ -12,11 +12,6 @@ from bot.FSM.states import (
     AdminIdsStates,
 )
 from bot.callbacks.callbackData import get_users_keyboard, PAGE_SIZE
-from db.services.settings_crud import (
-    set_logs_group_id,
-    get_all_settings,
-    set_timeout_chek_chat,
-)
 from db.services.user_crud import delete_admin, set_new_admin, get_all_users
 from db.services.telegram_crud import (
     get_telegram_account_by_alias,
@@ -41,9 +36,7 @@ API_TELETHON_HASH = settings.API_TELETHON_HASH
 
 router = Router()
 
-help_text_for_admin = """<b>Каманды для админа:</b>\n\n /bind - привязка бота к группе, в которой он будет хранить файлы. В БД файлы хранить нельзя. Группа для логов может быть только одна, и бот должен быть админом!\n
-/setting - настройки бота, показывает айди группы к которой привязан, также таймаут для чекера чатов.\n
-/timeout - установить таймаут для чекера чтение/запись чатов\n
+help_text_for_admin = """<b>Каманды для админа:</b>\n\n 
 /kill_session - удаление всех сессий на аккаунте за исключением бота. Полезно, если нужно выкинуть всех с аккаунта.\n
 /get_info - выводит айди группы\n
 /delete_admin - лешение прав по нику пользователя в боте, действует на всех\n
@@ -55,98 +48,6 @@ help_text_for_admin = """<b>Каманды для админа:</b>\n\n /bind - 
 @router.message(Command("help_admin"))
 async def cmd_help_admin(message: types.Message):
     await message.answer(help_text_for_admin, parse_mode="HTML")
-
-
-@router.message(Command("bind"))
-async def cmd_bind_admin(message: types.Message, state: FSMContext):
-    """Записывает айди чата, в который нужно переслать файлы"""
-    if message.chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP]:
-        await message.answer("Команду нужно вызывать в группе/супергруппе!")
-        return
-    await message.answer("<b>Введите айди чата для привязки:</b>", parse_mode="HTML")
-    await state.set_state(LogGroupIdState.wait_group_id)
-
-
-@router.message(LogGroupIdState.wait_group_id)
-async def get_chat_id_for_log_group(message: types.Message, state: FSMContext):
-    """Ожидаем сообщение от админа с новым значеним для LOG_GROUP_ID"""
-    group_id = message.text.strip()
-    if len(group_id) <= 5:
-        await message.answer("Введите корректное айди группы для команды /bind!")
-        await state.clear()
-        return
-    if group_id:
-        try:
-            set_logs_group_id(group_id=group_id)
-            logger.info(f"Get_chat_id_for_log_group: Bind bot to group={group_id}")
-            await message.answer(
-                f"Установлена логовая группа: <code>{group_id}</code>",
-                parse_mode="HTML",
-            )
-        except Exception as e:
-            logger.error(
-                "Get_chat_id_for_log_group: Ошибка привязки бота к логовой группе!"
-            )
-            await message.answer(
-                f"<b>Произошла ошибка привязки:</b> {e}", parse_mode="HTML"
-            )
-
-    await state.clear()
-
-
-@router.message(Command("settings"))
-async def cmd_get_settings(message: types.Message):
-    """Выводит текущие настройки указаные в БД"""
-    bot_settings = get_all_settings()
-    if not bot_settings:
-        await message.answer("Настройки не найдены!")
-        return
-
-    msg_text = "<b>Список настроек:</b>\n\n"
-    for setting in bot_settings:
-        msg_text += (
-            f"KEY: <code>{setting['setting_key']}</code>\n"
-            f"VALUE: <code>{setting['setting_value']}</code>\n"
-            "----------\n"
-        )
-
-    await message.answer(msg_text, parse_mode="HTML")
-
-
-@router.message(Command("timeout"))
-async def cmd_set_timeout(message: types.Message, state: FSMContext):
-    """Установка тайм аута для чекера"""
-    await message.answer(
-        "<b>Крайне не рекомендуется устанавливать низкий интервал для чекера чатов!\n Оптимальный вариант от 10-15.</b>",
-        parse_mode="HTML",
-    )
-    await message.answer("<b>Введите таймаут для черека:</b>", parse_mode="HTML")
-    await state.set_state(TimeoutStates.wait_timeout)
-
-
-@router.message(TimeoutStates.wait_timeout)
-async def get_timeout(message: types.Message, state: FSMContext):
-    """Ожидаем новое значение, записываем в БД"""
-    timeout_msg = message.text.strip()
-    if timeout_msg:
-        if not len(timeout_msg) > 1:
-            await message.answer(
-                "Недопустимое значение, меньше 10 быть не может! Введите заново /timeout"
-            )
-            state.clear()
-            return
-        try:
-            set_timeout_chek_chat(timeout_msg)
-            logger.info(f"Get_timeout: set timeout={timeout_msg}")
-            await message.answer(
-                f"Установлен новый таймаут для чекера: timeout={timeout_msg}"
-            )
-        except Exception as e:
-            logger.error(f"Get_timeout: Ошибка в назначении нового таймаута: {e}")
-            await message.answer(
-                f"<b>Ошибка в записи нового таймаута:</b> {e}", parse_mode="HTML"
-            )
-    await state.clear()
 
 
 @router.message(Command("kill_session"))
@@ -255,7 +156,7 @@ async def get_admin_name_for_delete(message: types.Message, state: FSMContext):
 
 @router.message(Command("view_users"))
 async def cmd_view_users(message: types.Message):
-    all_users = get_all_users() 
+    all_users = get_all_users()
     if not all_users:
         await message.answer("Пользователи не найдены!")
         return

@@ -1,10 +1,12 @@
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 
+from sqlalchemy import func
+
+from bot.utils.crypto import encrypt_text, decrypt_text
 from db.models.model import TelegramAccount, TelegramMessage, UserSession
 from db.services.manager import get_db_session
-from bot.utils.crypto import encrypt_text, decrypt_text
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +74,56 @@ def create_telegram_message(
             "created_at": msg.created_at,
             "updated_at": msg.updated_at,
         }
+
+
+def list_chats_for_account(account_id: int) -> list[dict]:
+    with get_db_session() as db:
+        chats = (
+            db.query(
+                TelegramMessage.chat_id,
+                TelegramMessage.chat_name,
+                func.count(TelegramMessage.id).label("msg_count"),
+            )
+            .filter_by(account_id=account_id)
+            .group_by(TelegramMessage.chat_id, TelegramMessage.chat_name)
+            .all()
+        )
+
+        return [
+            {
+                "chat_id": chat.chat_id,
+                "chat_name": chat.chat_name,
+                "msg_count": chat.msg_count,
+            }
+            for chat in chats
+        ]
+
+
+def get_chat_messages(account_id: int, chat_id: int) -> list[dict]:
+    with get_db_session() as db:
+        messages = (
+            db.query(TelegramMessage)
+            .filter_by(account_id=account_id, chat_id=chat_id)
+            .order_by(TelegramMessage.date.desc())
+            .all()
+        )
+
+        return [
+            {
+                "id": msg.id,
+                "chat_id": msg.chat_id,
+                "sender_id": msg.sender_id,
+                "text": msg.text,
+                "media_path": msg.media_path,
+                "date": msg.date.strftime("%Y-%m-%d %H:%M:%S"),
+                "deleted_at": (
+                    msg.deleted_at.strftime("%Y-%m-%d %H:%M:%S")
+                    if msg.deleted_at
+                    else None
+                ),
+            }
+            for msg in messages
+        ]
 
 
 def mark_deleted_messages(account_id: int, message_ids: List[int]) -> None:
@@ -144,6 +196,27 @@ def list_messages_by_chat(
             )
 
         return result
+
+
+def get_account_messages(account_id: int) -> list[dict]:
+    with get_db_session() as db:
+        messages = (
+            db.query(TelegramMessage)
+            .filter_by(account_id=account_id)
+            .order_by(TelegramMessage.date.desc())
+            .all()
+        )
+        return [
+            {
+                "id": msg.id,
+                "chat_id": msg.chat_id,
+                "sender_id": msg.sender_id,
+                "text": msg.text,
+                "media_path": msg.media_path,
+                "date": msg.date.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            for msg in messages
+        ]
 
 
 # ---------- TelegramAccount CRUD ----------

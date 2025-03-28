@@ -1,6 +1,6 @@
+import sys
 import logging
 import asyncio
-import sys
 from contextlib import suppress
 from aiogram import Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
