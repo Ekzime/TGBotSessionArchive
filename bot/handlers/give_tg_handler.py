@@ -4,7 +4,6 @@ import logging
 from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from dotenv import load_dotenv
 from telethon import TelegramClient
 from telethon.errors import (
     SessionPasswordNeededError,

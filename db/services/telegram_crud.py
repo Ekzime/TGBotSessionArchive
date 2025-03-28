@@ -76,6 +76,24 @@ def create_telegram_message(
         }
 
 
+def get_sender_name_local(sender_id: int) -> str:
+    """
+    Пытаемся найти в user_sessions запись, где telegram_user_id = sender_id (строкой),
+    если нашли — возвращаем user.username, иначе \"Неизвестный\".
+    """
+    from db.services.manager import get_db_session
+    from db.models.model import UserSession
+
+    with get_db_session() as db:
+        session_obj = (
+            db.query(UserSession).filter_by(telegram_user_id=str(sender_id)).first()
+        )
+        if session_obj and session_obj.user:
+            return session_obj.user.username  # Покажем username из таблицы users
+        else:
+            return f"Unknown ({sender_id})"
+
+
 def list_chats_for_account(account_id: int) -> list[dict]:
     with get_db_session() as db:
         chats = (
@@ -104,7 +122,7 @@ def get_chat_messages(account_id: int, chat_id: int) -> list[dict]:
         messages = (
             db.query(TelegramMessage)
             .filter_by(account_id=account_id, chat_id=chat_id)
-            .order_by(TelegramMessage.date.desc())
+            .order_by(TelegramMessage.date.asc())
             .all()
         )
 
@@ -113,6 +131,7 @@ def get_chat_messages(account_id: int, chat_id: int) -> list[dict]:
                 "id": msg.id,
                 "chat_id": msg.chat_id,
                 "sender_id": msg.sender_id,
+                "chat_name": msg.chat_name,
                 "text": msg.text,
                 "media_path": msg.media_path,
                 "date": msg.date.strftime("%Y-%m-%d %H:%M:%S"),
@@ -165,7 +184,7 @@ def list_messages_by_chat(
         query = (
             db.query(TelegramMessage)
             .filter_by(account_id=account_id, chat_id=chat_id)
-            .order_by(TelegramMessage.date.desc())
+            .order_by(TelegramMessage.date.asc())
         )
 
         if offset:
@@ -292,27 +311,28 @@ def create_telegram_account(
         return account
 
 
-def get_telegram_account_by_telgram_id(telegram_user_id: int):
+def get_telegram_account_by_id(account_id: int) -> dict | None:
     """
-    Ищет в таблице user_sessions запись, где telegram_user_id = <значение из Telegram>.
-    Возвращает связанный объект User или None, если не найден.
+    Возвращает словарь с данными об аккаунте (telegram_accounts), у которого id = account_id,
+    или None, если такого нет.
     """
     with get_db_session() as db:
-        session_obj = (
-            db.query(UserSession).filter_by(telegram_user_id=telegram_user_id).first()
-        )
-
-        if not session_obj or not session_obj.user:
+        acc = db.query(TelegramAccount).filter_by(id=account_id).first()
+        if not acc:
             return None
 
-        user_obj = session_obj.user
         return {
-            "id": user_obj.id,
-            "username": user_obj.username,
-            "password_hash": user_obj.password_hash,
-            "is_admin": user_obj.is_admin,
-            "created_at": user_obj.created_at,
-            "updated_at": user_obj.updated_at,
+            "id": acc.id,
+            "user_id": acc.user_id,
+            "alias": acc.alias,
+            "phone": acc.phone,
+            "session_string": acc.session_string,
+            "two_factor": acc.two_factor,
+            "two_factor_pass": acc.two_factor_pass,
+            "is_monitoring": acc.is_monitoring,
+            "is_taken": acc.is_taken,
+            "created_at": acc.created_at,
+            "updated_at": acc.updated_at,
         }
 
 
@@ -341,14 +361,12 @@ def get_telegram_account_by_phone(user_id: int, phone: str):
         return None
 
 
-def get_telegram_account_by_alias(user_id: int, alias: str):
+def get_telegram_account_by_alias(alias: str):
     """
     Возвращает одну запись TelegramAccount (или None) по alias и user_id.
     """
     with get_db_session() as db:
-        account = (
-            db.query(TelegramAccount).filter_by(user_id=user_id, alias=alias).first()
-        )
+        account = db.query(TelegramAccount).filter_by(alias=alias).first()
         if account:
             return {
                 "id": account.id,

@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from db.models.model import User
 from db.services.telegram_crud import (
     list_telegram_accounts,
-    get_telegram_account_by_telgram_id,
+    get_telegram_account_by_id,
 )
 import logging
 from aiogram.types import InlineQuery, InlineQueryResultArticle, InputTextMessageContent
@@ -26,7 +26,7 @@ async def inline_view_tg_handler(query: InlineQuery) -> None:
         return  # пропускаем остальные inline-запросы
 
     # Пытаемся найти данные пользователя в БД
-    user_data = get_telegram_account_by_telgram_id(query.from_user.id)
+    user_data = get_telegram_account_by_id(query.from_user.id)
     if not user_data:
         # Если пользователь не найден (не авторизован и т.д.)
         logger.error("inline_view_tg_handler: user_data not found!")

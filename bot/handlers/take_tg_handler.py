@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 
 from aiogram import Router, types, F
 from aiogram.filters import Command
-from aiogram.types import InlineQuery, InlineQueryResultArticle, InputTextMessageContent
 from telethon import TelegramClient, events
 from telethon.errors import SessionRevokedError, FloodWaitError
 from telethon.sessions import StringSession

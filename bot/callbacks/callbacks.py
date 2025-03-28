@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from bot.handlers.give_tg_handler import cmd_give_tg
 from bot.handlers.take_tg_handler import cmd_take_tg
 from db.services.telegram_crud import (
-    get_telegram_account_by_telgram_id,
+    get_telegram_account_by_id,
 )
 from bot.FSM.states import TakeTgStates
 

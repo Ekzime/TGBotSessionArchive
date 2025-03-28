@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>Чат {{ chat_id }}</title>
+  <style>
+    body { font-family: sans-serif; }
+    .message { border: 1px solid #ccc; margin-bottom: 1em; padding: 0.5em; }
+    .deleted { color: red; }
+    .ok { color: green; }
+    .photo { max-width: 200px; display: block; margin-top: 0.5em; }
+    .audio, .video { margin-top: 0.5em; }
+  </style>
+</head>
+<body>
+<h1>Чат № {{ chat_id }}</h1>
+
+{% for m in messages %}
+  <div class="message">
+    <div><b>{{ m.date }}</b></div>
+
+    {% if m.deleted_at %}
+      <div class="deleted">Статус: Удалено</div>
+    {% else %}
+      <div class="ok">Статус: Сохранено</div>
+    {% endif %}
+
+    <div>Отправитель: {{ m.sender_str }}</div>
+
+    {% if m.text %}
+      <div>Текст: {{ m.text }}</div>
+    {% endif %}
+
+    {% if m.embed_b64 %}
+      {% if m.media_type == "photo" %}
+        <!-- Изображение -->
+        <img src="data:image/*;base64,{{ m.embed_b64 }}" class="photo"/>
+      {% elif m.media_type == "voice" %}
+        <!-- Аудио (голосовое) -->
+        <audio controls class="audio">
+          <source src="data:audio/ogg;base64,{{ m.embed_b64 }}">
+          Ваш браузер не поддерживает аудио.
+        </audio>
+      {% elif m.media_type == "video" %}
+        <!-- Видео -->
+        <video controls class="video" width="320">
+          <source src="data:video/mp4;base64,{{ m.embed_b64 }}">
+          Ваш браузер не поддерживает видео.
+        </video>
+      {% else %}
+        <!-- Документ (pdf/zip/word/прочее) -->
+        <a href="data:application/octet-stream;base64,{{ m.embed_b64 }}" download="{{ m.filename|e }}">
+          Скачать файл
+        </a>
+      {% endif %}
+    {% endif %}
+  </div>
+{% endfor %}
+</body>
+</html>

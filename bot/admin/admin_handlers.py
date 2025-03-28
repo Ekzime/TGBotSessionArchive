@@ -64,7 +64,7 @@ async def cmd_kill_session(message: types.Message, current_user: User):
 
     # берем alias + user_id и ищем его в БД
     alias = parts[1].strip()
-    acсount_dict = get_telegram_account_by_alias(current_user.id, alias)
+    acсount_dict = get_telegram_account_by_alias(alias=alias)
     if not acсount_dict:
         await message.answer("Аккаунт для убийства сессий не найден.")
         return

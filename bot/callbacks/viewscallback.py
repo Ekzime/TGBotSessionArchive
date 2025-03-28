@@ -1,3 +1,5 @@
+from pathlib import Path
+from aiogram.types import FSInputFile
 import math
 import logging
 from aiogram import Router, types
@@ -11,11 +13,57 @@ from bot.callbacks.callbackData import (
     get_chats_keyboard,
 )
 from db.services.user_crud import get_all_users
-from db.services.telegram_crud import list_telegram_accounts, list_chats_for_account
+from db.services.telegram_crud import (
+    list_telegram_accounts,
+    list_chats_for_account,
+    get_chat_messages,
+    get_telegram_account_by_id,
+)
+from jinja2 import Environment, FileSystemLoader
+import base64
+import tempfile
+import os
+import os.path
 
 logger = logging.getLogger(__name__)
 
 router = Router()
+
+env = Environment(
+    loader=FileSystemLoader("bot/templates")
+)  # Папка, где хранится chat.html
+template = env.get_template("chat.html")
+
+
+def generate_chat_html(chat_id: int, messages: list[dict]) -> str:
+    """
+    Генерирует HTML, встраивая картинки/медиа (фото, видео, голосовые, etc.) в Base64.
+    Возвращает строку HTML (Unicode).
+    """
+    for m in messages:
+        media_path = m.get("media_path")
+        if media_path and os.path.exists(media_path):
+            with open(media_path, "rb") as f:
+                data = f.read()
+            # base64
+            m["embed_b64"] = base64.b64encode(data).decode("utf-8")
+        else:
+            m["embed_b64"] = None
+
+        # "голоса" (ogg/opus) => voice, mp4 => video, jpg/png => photo, иначе document
+        if not m.get("media_type"):
+            ext = os.path.splitext(media_path or "")[1].lower()
+            if ext in (".jpg", ".jpeg", ".png"):
+                m["media_type"] = "photo"
+            elif ext in (".ogg", ".opus"):
+                m["media_type"] = "voice"
+            elif ext in (".mp4", ".mov"):
+                m["media_type"] = "video"
+            else:
+                m["media_type"] = "document"
+
+    html_out = template.render(chat_id=chat_id, messages=messages)
+    return html_out
 
 
 @router.callback_query(UsersCallbackFactory.filter())
@@ -141,3 +189,51 @@ async def process_users_callback(
             parse_mode="HTML",
         )
         await query.answer()
+    elif callback_data.action == "chat_messages":
+        account_id = callback_data.account_id
+        chat_id = callback_data.chat_id
+
+        messages = get_chat_messages(account_id, chat_id)
+        if not messages:
+            await query.message.edit_text("В этом чате нет сообщений!")
+            await query.answer()
+            return
+
+        # 1) Определяем local_id (кто "мы")
+        acc_dict = get_telegram_account_by_id(account_id)
+        alias_local = acc_dict["alias"]
+        my_telegram_id = acc_dict["user_id"]
+
+        # 2) Дополним поля в messages
+        for m in messages:
+            m["deleted_at"] = bool(m["deleted_at"])
+
+            # Кто отправитель
+            if str(m["sender_id"]) == str(my_telegram_id):
+                m["sender_str"] = alias_local
+            else:
+                m["sender_str"] = m.get("chat_name", "Собеседник")
+
+            # filename для скачивания
+            if m.get("media_path"):
+                m["filename"] = os.path.basename(m["media_path"])
+            else:
+                m["filename"] = "file.bin"
+        # 3) Формируем HTML
+        html_content = generate_chat_html(chat_id, messages)
+
+        # 5) Записываем во временный файл (UTF-8!)
+        with tempfile.NamedTemporaryFile(
+            "w", encoding="utf-8", delete=False, suffix=".html"
+        ) as tmp:
+            tmp.write(html_content)
+            tmp_path = tmp.name
+
+        await query.message.edit_text("Формируем общий HTML-файл...")
+        await query.answer()
+
+        # 6) Отправляем файл
+        await query.message.answer_document(
+            FSInputFile(tmp_path), caption=f"История чата {chat_id}"
+        )
+        os.remove(tmp_path)
