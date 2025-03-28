@@ -133,10 +133,9 @@ async def process_users_callback(
 
         details_text = (
             f"<b>Аккаунт:</b>\n"
-            f"ID: {account_obj['id']}\n"
-            f"Alias: {account_obj['alias']}\n"
-            f"Phone: {account_obj['phone']}\n"
-            f"Мониторинг: {account_obj['is_monitoring']}\n"
+            f"Alias: <code>{account_obj['alias']}</code>\n"
+            f"Phone: <code>{account_obj['phone']}</code>\n"
+            f"Мониторинг: <b>{account_obj['is_monitoring']}</b>\n"
         )
         # Просто редактируем сообщение или отправляем новое
         await query.message.edit_text(details_text, parse_mode="HTML")

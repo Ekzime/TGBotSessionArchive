@@ -18,49 +18,48 @@ def _encrypt_two_factor_pass(two_factor_pass: str):
 
 
 # ---------- TelegramMessage CRUD ----------
-
-
 def create_telegram_message(
-    account_id: int,
-    chat_id: int,
-    message_id: int,
-    sender_id: Optional[int],
-    text: str,
-    date: datetime,
-    logs_msg_id: Optional[int] = None,
-    media_type: Optional[str] = None,
-) -> dict:
-    """
-    Сохраняет новое сообщение в таблицу telegram_messages.
-    Возвращает словарь с данными о сообщении.
-    """
+    account_id,
+    chat_id,
+    chat_name,
+    message_id,
+    sender_id,
+    text,
+    date,
+    logs_msg_id=None,
+    media_type=None,
+    media_path=None,
+):
     with get_db_session() as db:
         msg = TelegramMessage(
             account_id=account_id,
             chat_id=chat_id,
+            chat_name=chat_name,
             message_id=message_id,
             sender_id=sender_id,
             text=text,
             date=date,
             logs_msg_id=logs_msg_id,
             media_type=media_type,
+            media_path=media_path,
         )
-
         try:
             db.add(msg)
             db.commit()
             db.refresh(msg)
             logger.info(
-                f"Создано сообщение id={msg.id}, chat_id={chat_id}, message_id={message_id}"
+                "Создано сообщение id=%s, chat_id=%s, message_id=%s",
+                msg.id,
+                chat_id,
+                message_id,
             )
         except Exception as e:
-            db.rollback()
-            logger.error(f"Ошибка при создании сообщения: {e}")
-            raise e
-
+            logger.error("Create_telegram_message: Сообщение не записано в БД")
+            return
         return {
             "id": msg.id,
             "account_id": msg.account_id,
+            "chat_name": msg.chat_name,
             "chat_id": msg.chat_id,
             "message_id": msg.message_id,
             "sender_id": msg.sender_id,
@@ -69,6 +68,7 @@ def create_telegram_message(
             "deleted_at": msg.deleted_at,
             "logs_msg_id": msg.logs_msg_id,
             "media_type": msg.media_type,
+            "media_path": msg.media_path,
             "created_at": msg.created_at,
             "updated_at": msg.updated_at,
         }
@@ -130,6 +130,7 @@ def list_messages_by_chat(
                     "id": r.id,
                     "account_id": r.account_id,
                     "chat_id": r.chat_id,
+                    "chat_name": r.chat_name,
                     "message_id": r.message_id,
                     "sender_id": r.sender_id,
                     "text": r.text,
@@ -224,7 +225,9 @@ def get_telegram_account_by_telgram_id(telegram_user_id: int):
     Возвращает связанный объект User или None, если не найден.
     """
     with get_db_session() as db:
-        session_obj = db.query(UserSession).filter_by(telegram_user_id=telegram_user_id).first()
+        session_obj = (
+            db.query(UserSession).filter_by(telegram_user_id=telegram_user_id).first()
+        )
 
         if not session_obj or not session_obj.user:
             return None
@@ -236,8 +239,9 @@ def get_telegram_account_by_telgram_id(telegram_user_id: int):
             "password_hash": user_obj.password_hash,
             "is_admin": user_obj.is_admin,
             "created_at": user_obj.created_at,
-            "updated_at": user_obj.updated_at
+            "updated_at": user_obj.updated_at,
         }
+
 
 def get_telegram_account_by_phone(user_id: int, phone: str):
     """

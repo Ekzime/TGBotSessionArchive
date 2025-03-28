@@ -25,7 +25,7 @@ allowed_admin_commands = [
     "/timeout",
     "/help_admin",
     "/set_admin",
-    "/view_users"
+    "/view_users",
 ]
 
 
@@ -55,7 +55,7 @@ class AuthMiddleware(BaseMiddleware):
 
             # Если текущий пользователь не авторизован
             if current_user is None:
-                # Извлекаем команду (например: "/start", "/help", "/login")
+                # Извлекаем команду ("/start", "/help", "/login")
                 command = event.text.split()[0] if event.text else ""
 
                 # Проверяем, является ли команда разрешённой для неавторизованных пользователей

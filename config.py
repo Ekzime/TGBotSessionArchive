@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     ADMIN_PASSWORD: str = Field(..., env="ADMIN_PASSWORD")
 
     # временные типы
-    LOGS_GROUP_ID: int = Field(..., env="LOGS_GROUP_ID")
-    CHECK_INTERVAL: int = Field(..., env="CHECK_INTERVAL")
+    BASE_DIR: str = Field(..., env="BASE_DIR")
+    CHECK_INTERVAL: int = Field(...,env=("CHECK_INTERVAL"))
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

@@ -100,7 +100,7 @@ class TelegramMessage(Base, TimestampMixin):
     account_id = Column(
         Integer, ForeignKey("telegram_accounts.id", ondelete="CASCADE"), nullable=False
     )
-
+    chat_name = Column(String(50), nullable=False)
     chat_id = Column(BigInteger, nullable=False)  # ID чата в Telegram
     message_id = Column(BigInteger, nullable=False)  # ID сообщения в чате
     sender_id = Column(
@@ -117,6 +117,7 @@ class TelegramMessage(Base, TimestampMixin):
         BigInteger, nullable=True
     )  # ID пересланного сообщения в логовой группе
     media_type = Column(String(50), nullable=True)  # "voice", "document", "photo", etc.
+    media_path = Column(String(255), nullable=True)
 
     account = relationship("TelegramAccount", back_populates="messages")
 

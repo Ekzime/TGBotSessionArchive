@@ -6,6 +6,20 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
+def get_logs_group_id_from_db():
+    with get_db_session() as db:
+        group_id = db.query(BotSettings).filter_by(setting_key="LOGS_GROUP_ID").first()
+        if not group_id:
+            logger.error("get_logs_group_id: Не удалось найти айди лог группы!")
+            return
+        result = {
+            "setting_key": group_id.setting_key,
+            "setting_value": group_id.setting_value,
+        }
+        print(result["setting_value"])
+        return result
+
+
 def set_logs_group_id(group_id: str):
     with get_db_session() as db:
         obj = db.query(BotSettings).filter_by(setting_key="LOGS_GROUP_ID").first()

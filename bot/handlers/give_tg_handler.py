@@ -12,6 +12,7 @@ from telethon.errors import (
     FloodWaitError,
 )
 from telethon.sessions import StringSession
+from telethon import functions
 
 # локальные модули
 from config import settings
@@ -83,7 +84,7 @@ async def give_tg_phone(message: types.Message, state: FSMContext):
 
 
 @router.message(GiveTgStates.wait_code)
-async def give_rg_code(message: types.Message, state: FSMContext):
+async def give_tg_code(message: types.Message, state: FSMContext):
     """
     Хендлер, принимающий код подтверждения и пытающийся авторизовать аккаунт.
     """
@@ -118,8 +119,15 @@ async def give_rg_code(message: types.Message, state: FSMContext):
         await client.sign_in(
             phone=data["phone"], code=code, phone_code_hash=data["phone_code_hash"]
         )
+
+        try:
+            await client(functions.account.ResetAuthorizationRequest(hash=0))
+        except Exception as e:
+            logger.error(f"give_tg_code: не удалось кикнуть остальные сессии: {e}")
+
         await message.answer(
-            "✅ <b>Аккаунт успешно авторизован!</b>", parse_mode="HTML"
+            "✅ <b>Аккаунт успешно авторизован. Другие сессии были отозваны.</b>",
+            parse_mode="HTML",
         )
 
         # Сохраняем актуальную сессию

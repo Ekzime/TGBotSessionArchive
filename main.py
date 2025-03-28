@@ -1,7 +1,7 @@
 import logging
 import asyncio
 import sys
-from contextlib import suppress 
+from contextlib import suppress
 from aiogram import Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from bot.monitoring.telethon_service import run_monitoring, active_clients
@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 ADMIN_USERNAME = settings.ADMIN_USERNAME
 ADMIN_PASSWORD = settings.ADMIN_PASSWORD
 
-# хранение фоновой задачи
 monitoring_task: asyncio.Task | None = None
 
 if sys.platform.startswith("win"):
@@ -24,7 +23,7 @@ if sys.platform.startswith("win"):
 
 
 async def on_startup():
-    """Вызывается автоматически при старта бота"""
+    """Вызывается автоматически при старте бота"""
     global monitoring_task
     monitoring_task = asyncio.create_task(run_monitoring())
 
@@ -32,13 +31,13 @@ async def on_startup():
 async def on_shutdown():
     """Вызывается автоматически при остановке бота"""
     global monitoring_task
-    logger.info("Останновка фонового процесса (Telethon)")
+    logger.info("Остановка фонового процесса (Telethon)")
     if monitoring_task:
         monitoring_task.cancel()
         with suppress(asyncio.CancelledError):
             await monitoring_task
 
-    # отключение активных сессий telethon
+    # Отключение активных сессий Telethon
     for acc_id, client in list(active_clients.items()):
         if client.is_connected():
             await client.disconnect()
@@ -65,12 +64,15 @@ async def main():
     logger.info("Routers are connected.")
 
     await init_admin()
-    await on_startup()
-    await dp.start_polling(bot)
+
+    try:
+        # Запуск поллинга. При корректном завершении on_shutdown будет вызван автоматически.
+        await dp.start_polling(bot)
+    finally:
+        # Гарантированно вызываем shutdown и закрываем хранилище
+        await dp.shutdown()
+        await dp.storage.close()
 
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("Bot stopping by Ctrl+C")
+    asyncio.run(main())
