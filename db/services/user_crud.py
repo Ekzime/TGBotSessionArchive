@@ -69,9 +69,10 @@ def create_admin_account(username: str, password: str, is_admin: bool = True):
                 f"Create_admin_account: Первинный админ уже существует! Username={username}"
             )
             return
-        register_user(username=username, password=password, is_admin=is_admin)
-        logger.info(f"Create_admin_account: Создан новый админ с username={username}")
-
+        else:
+            register_user(username=username, password=password, is_admin=is_admin)
+            logger.info(f"Create_admin_account: Создан новый админ с username={username}")
+            
 
 def register_user(username: str, password: str, is_admin: bool = False) -> dict:
     """

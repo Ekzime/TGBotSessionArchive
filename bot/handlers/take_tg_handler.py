@@ -16,8 +16,8 @@ from bot.core.bot_instance import bot
 from db.services.telegram_crud import (
     get_telegram_account_by_alias,
     delete_telegram_account,
+    update_telegram_account,
 )
-from db.models.model import User
 
 
 API_TELETHON_ID = settings.API_TELETHON_ID
@@ -38,7 +38,7 @@ async def handle_take_tg_logic(user_id: int, alias: str, chat_id: int) -> str:
     - Возвращает строку, которую вызывающий код может отправить пользователю.
     """
 
-    account = get_telegram_account_by_alias(user_id=user_id, alias=alias)
+    account = get_telegram_account_by_alias(alias=alias)
     if not account:
         return "Аккаунт не найден, проверьте alias и попробуйте заново."
 
@@ -95,13 +95,13 @@ async def poll_for_new_session(
         await asyncio.sleep(5)  # Интервал опроса
         try:
             auth_result = await client(GetAuthorizationsRequest())
-            current_count = len(auth_result.authorizations)
+            current_acount = len(auth_result.authorizations)
         except SessionRevokedError:
             # Сессию аннулировали (Terminate all sessions)
             logger.warning(f"Session revoked for alias={alias}, phone={phone}")
             await bot.send_message(
                 chat_id,
-                f"Сессия аккаунта <b>{alias}</b> отозвана. Удаляем из БД.",
+                f"Сессия аккаунта <b>{alias}</b> удалено кем-то. Удаляем из БД.",
                 parse_mode="HTML",
             )
             delete_telegram_account(alias, phone)
@@ -120,10 +120,10 @@ async def poll_for_new_session(
             await bot.send_message(chat_id, f"Ошибка при проверке сессий: {e}")
             return
 
-        if current_count > initial_count:
+        if current_acount > initial_count:
             # Новая сессия обнаружена
             logger.info(f"New session detected for alias={alias}, phone={phone}")
-            delete_telegram_account(alias, phone)
+            update_telegram_account(current_acount,is_taken=True)
             await bot.send_message(
                 chat_id,
                 f"Аккаунт <b>{alias}</b> удалён из БД (обнаружена новая сессия).",

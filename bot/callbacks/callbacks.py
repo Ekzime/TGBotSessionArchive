@@ -5,6 +5,7 @@ from bot.handlers.give_tg_handler import cmd_give_tg
 from bot.handlers.take_tg_handler import cmd_take_tg
 from db.services.telegram_crud import (
     get_telegram_account_by_id,
+    get_telegram_account_by_alias,
 )
 from bot.FSM.states import TakeTgStates
 
@@ -30,7 +31,7 @@ async def callback_take_tg(callback: types.CallbackQuery, state: FSMContext) -> 
 
 @router.message(TakeTgStates.wait_alias)
 async def callback_get_alias_tg(message: types.Message, state: FSMContext):
-    user_data = get_telegram_account_by_telgram_id(message.from_user.id)
+    user_data = get_telegram_account_by_alias(message.text.strip())
     if not user_data:
         await message.answer("Не найдено пользователя!")
         return

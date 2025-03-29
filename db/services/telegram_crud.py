@@ -26,6 +26,7 @@ def create_telegram_message(
     chat_name,
     message_id,
     sender_id,
+    sender_name,
     text,
     date,
     logs_msg_id=None,
@@ -39,6 +40,7 @@ def create_telegram_message(
             chat_name=chat_name,
             message_id=message_id,
             sender_id=sender_id,
+            sender_name=sender_name,
             text=text,
             date=date,
             logs_msg_id=logs_msg_id,
@@ -65,6 +67,7 @@ def create_telegram_message(
             "chat_id": msg.chat_id,
             "message_id": msg.message_id,
             "sender_id": msg.sender_id,
+            "sender_name": msg.sender_name,
             "text": msg.text,
             "date": msg.date,
             "deleted_at": msg.deleted_at,
@@ -76,22 +79,19 @@ def create_telegram_message(
         }
 
 
-def get_sender_name_local(sender_id: int) -> str:
+def get_sender_display_name(sender_id: int) -> str:
     """
-    Пытаемся найти в user_sessions запись, где telegram_user_id = sender_id (строкой),
-    если нашли — возвращаем user.username, иначе \"Неизвестный\".
+    Пытается найти, есть ли такой sender_id среди UserSession.telegram_user_id.
+    Если нашёл — возвращаем user.username;
+    Иначе возвращаем пустую строку, чтобы далее подставить fallback.
     """
-    from db.services.manager import get_db_session
-    from db.models.model import UserSession
-
     with get_db_session() as db:
         session_obj = (
             db.query(UserSession).filter_by(telegram_user_id=str(sender_id)).first()
         )
         if session_obj and session_obj.user:
-            return session_obj.user.username  # Покажем username из таблицы users
-        else:
-            return f"Unknown ({sender_id})"
+            return session_obj.user.username  # Подставляем имя
+        return ""  # Не нашли
 
 
 def list_chats_for_account(account_id: int) -> list[dict]:
@@ -131,6 +131,7 @@ def get_chat_messages(account_id: int, chat_id: int) -> list[dict]:
                 "id": msg.id,
                 "chat_id": msg.chat_id,
                 "sender_id": msg.sender_id,
+                "sender_name": msg.sender_name,
                 "chat_name": msg.chat_name,
                 "text": msg.text,
                 "media_path": msg.media_path,
@@ -271,6 +272,8 @@ def create_telegram_account(
     session_string: str = None,
     two_factor: bool = False,
     two_factor_pass: str = None,
+    is_monitoring: bool = True,
+    is_taken: bool = False,
 ):
     """
     Создаёт запись в telegram_accounts с проверками и обработкой ошибок.
@@ -296,6 +299,8 @@ def create_telegram_account(
             session_string=session_string,
             two_factor=two_factor,
             two_factor_pass=_encrypt_two_factor_pass(two_factor_pass),
+            is_monitoring=is_monitoring,
+            is_taken=is_taken,
         )
 
         try:

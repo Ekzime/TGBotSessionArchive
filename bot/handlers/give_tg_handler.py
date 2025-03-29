@@ -185,7 +185,7 @@ async def give_tg_alias(message: types.Message, state: FSMContext, current_user:
     alias = message.text.strip()
     data = await state.get_data()
 
-    existing_account = get_telegram_account_by_alias(current_user.id, alias)
+    existing_account = get_telegram_account_by_alias(alias)
     existing_account_by_phone = get_telegram_account_by_phone(
         current_user.id, data["phone"]
     )
@@ -281,7 +281,7 @@ async def give_tg_alias_2fa(
     alias = message.text.strip()
     data = await state.get_data()
 
-    existing_account = get_telegram_account_by_alias(current_user.id, alias)
+    existing_account = get_telegram_account_by_alias(alias)
     existing_account_by_phone = get_telegram_account_by_phone(
         current_user.id, data["phone"]
     )

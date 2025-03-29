@@ -102,6 +102,7 @@ class TelegramMessage(Base, TimestampMixin):
     )
     chat_name = Column(String(50), nullable=False)
     chat_id = Column(BigInteger, nullable=False)  # ID чата в Telegram
+    sender_name = Column(String(100), nullable=True)  # Имя отправителя
     message_id = Column(BigInteger, nullable=False)  # ID сообщения в чате
     sender_id = Column(
         BigInteger, nullable=True

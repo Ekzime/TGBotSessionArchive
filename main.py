@@ -31,7 +31,7 @@ async def on_startup():
 async def on_shutdown():
     """Вызывается автоматически при остановке бота"""
     global monitoring_task
-    logger.info("Остановка фонового процесса (Telethon)")
+    logger.info("on_shutdown: Остановка фонового процесса (Telethon)")
     if monitoring_task:
         monitoring_task.cancel()
         with suppress(asyncio.CancelledError):
@@ -42,15 +42,12 @@ async def on_shutdown():
         if client.is_connected():
             await client.disconnect()
         active_clients.pop(acc_id, None)
-    logger.info("Все Telethon-клиенты отключены")
+    logger.info("on_shutdown: Все Telethon-клиенты отключены")
 
 
 async def init_admin():
     create_admin_account(
         username=ADMIN_USERNAME, password=ADMIN_PASSWORD, is_admin=True
-    )
-    logger.info(
-        f"Создан профиль админа: username: {ADMIN_USERNAME}, password={ADMIN_PASSWORD}"
     )
 
 
@@ -61,15 +58,13 @@ async def main():
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
 
-    logger.info("Routers are connected.")
-
     await init_admin()
 
     try:
         # Запуск поллинга. При корректном завершении on_shutdown будет вызван автоматически.
         await dp.start_polling(bot)
     finally:
-        # Гарантированно вызываем shutdown и закрываем хранилище
+        # Гарантированно вызов shutdown и закрываем хранилище
         await dp.shutdown()
         await dp.storage.close()
 

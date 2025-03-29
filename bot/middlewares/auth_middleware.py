@@ -19,10 +19,7 @@ allowed_states = [
 allowed_commands = ["/start", "/login", "/register"]
 allowed_admin_commands = [
     "/get_info",
-    "/bind",
     "/kill_session",
-    "/settings",
-    "/timeout",
     "/help_admin",
     "/set_admin",
     "/view_users",

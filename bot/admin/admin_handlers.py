@@ -59,7 +59,7 @@ async def cmd_kill_session(message: types.Message, current_user: User):
     # проверка на корректность ожидаемого ввода
     parts = message.text.split()
     if len(parts) < 2:
-        await message.answer("Использование: /cleanup_sessions <alias>")
+        await message.answer("Использование: /kill_session <alias>")
         return
 
     # берем alias + user_id и ищем его в БД

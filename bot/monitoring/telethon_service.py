@@ -13,6 +13,7 @@ from db.services.telegram_crud import (
     mark_deleted_messages,
 )
 
+logging.getLogger("telethon").setLevel(logging.CRITICAL)
 logger = logging.getLogger(__name__)
 
 API_TELETHON_ID = settings.API_TELETHON_ID
@@ -58,10 +59,13 @@ async def run_monitoring():
                 try:
                     client = await start_client_for_account(acc)
                     active_clients[acc_id] = client
-                    logger.info("Запущен Telethon-клиент для account_id=%d", acc_id)
+                    logger.info(
+                        "run_monitoring: Запущен Telethon-клиент для account_id=%d",
+                        acc_id,
+                    )
                 except Exception as e:
                     logger.error(
-                        "Ошибка при запуске клиента для account_id=%d: %s",
+                        "run_monitoring: Ошибка при запуске клиента для account_id=%d: %s",
                         acc_id,
                         e,
                         exc_info=True,
@@ -75,7 +79,7 @@ async def run_monitoring():
                     await client.disconnect()
                 except Exception as e:
                     logger.error(
-                        "Ошибка при отключении клиента account_id=%d: %s",
+                        "run_monitoring: Ошибка при отключении клиента account_id=%d: %s",
                         acc_id,
                         e,
                         exc_info=True,
@@ -87,13 +91,16 @@ async def run_monitoring():
         for acc_id, client in list(active_clients.items()):
             if not client.is_connected():
                 logger.warning(
-                    "Client for account_id=%d не is_connected(), отключаем", acc_id
+                    "run_monitoring: Client for account_id=%d не is_connected(), отключаем",
+                    acc_id,
                 )
                 await client.disconnect()
                 del active_clients[acc_id]
                 continue
             if not await client.is_user_authorized():
-                logger.warning("Аккаунт id=%d не авторизован, отключаем", acc_id)
+                logger.warning(
+                    "run_monitoring: Аккаунт id=%d не авторизован, отключаем", acc_id
+                )
                 await client.disconnect()
                 del active_clients[acc_id]
                 continue
@@ -111,7 +118,10 @@ async def start_client_for_account(acc_dict: dict) -> TelegramClient:
     await client.connect()
 
     if not await client.is_user_authorized():
-        logger.warning("Аккаунт id=%d не авторизован, пропускаем.", account_id)
+        logger.warning(
+            "start_client_for_account: Аккаунт id=%d не авторизован, пропускаем.",
+            account_id,
+        )
         return client
 
     # Создаем папку заранее
@@ -134,7 +144,9 @@ async def start_client_for_account(acc_dict: dict) -> TelegramClient:
                 chat, "username", None
             )
         except Exception as e:
-            logger.warning("Ошибка при получении имени чата: %s", e)
+            logger.warning(
+                "start_client_for_account: Ошибка при получении имени чата: %s", e
+            )
 
         text = event.raw_text or ""
         media_type = None
@@ -161,8 +173,27 @@ async def start_client_for_account(acc_dict: dict) -> TelegramClient:
                 media_path = media_file_path
                 text = f"[{media_type}]"
             else:
-                logger.error("Не удалось сохранить медиа файл для сообщения %d", msg_id)
+                logger.error(
+                    "start_client_for_account: Не удалось сохранить медиа файл для сообщения %d",
+                    msg_id,
+                )
 
+        sender_name = None
+        try:
+            me = await client.get_me()
+            if sender_id == me.id:
+                sender_name = acc_dict["alias"]
+            else:
+                # получаем реального sender через event
+                sender_obj = await event.get_sender()
+                if sender_obj:
+                    sender_name = (
+                        sender_obj.first_name or sender_obj.username or "Собеседник"
+                    )
+                else:
+                    sender_name = "Собеседник"
+        except:
+            sender_name = "Собеседник"
         try:
             create_telegram_message(
                 account_id=account_id,
@@ -170,14 +201,18 @@ async def start_client_for_account(acc_dict: dict) -> TelegramClient:
                 chat_name=chat_name,
                 message_id=msg_id,
                 sender_id=sender_id,
+                sender_name=sender_name,
                 text=text,
                 date=date,
-                logs_msg_id=None,
                 media_type=media_type,
                 media_path=media_path,
             )
         except Exception as e:
-            logger.error("Ошибка при записи сообщения в БД: %s", e, exc_info=True)
+            logger.error(
+                "start_client_for_account: Ошибка при записи сообщения в БД: %s",
+                e,
+                exc_info=True,
+            )
 
     @client.on(events.MessageDeleted())
     async def handler_deleted(event):
@@ -186,7 +221,9 @@ async def start_client_for_account(acc_dict: dict) -> TelegramClient:
             mark_deleted_messages(account_id, deleted_ids)
         except Exception as e:
             logger.error(
-                "Ошибка при отметке удалённых сообщений в БД: %s", e, exc_info=True
+                "start_client_for_account: Ошибка при отметке удалённых сообщений в БД: %s",
+                e,
+                exc_info=True,
             )
 
     return client

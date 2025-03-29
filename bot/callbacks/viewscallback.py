@@ -18,6 +18,7 @@ from db.services.telegram_crud import (
     list_chats_for_account,
     get_chat_messages,
     get_telegram_account_by_id,
+    get_sender_display_name,
 )
 from jinja2 import Environment, FileSystemLoader
 import base64
@@ -201,18 +202,12 @@ async def process_users_callback(
 
         # 1) Определяем local_id (кто "мы")
         acc_dict = get_telegram_account_by_id(account_id)
-        alias_local = acc_dict["alias"]
-        my_telegram_id = acc_dict["user_id"]
+        alias = acc_dict["alias"]
+        user_id = acc_dict["user_id"]
 
         # 2) Дополним поля в messages
         for m in messages:
-            m["deleted_at"] = bool(m["deleted_at"])
-
-            # Кто отправитель
-            if str(m["sender_id"]) == str(my_telegram_id):
-                m["sender_str"] = alias_local
-            else:
-                m["sender_str"] = m.get("chat_name", "Собеседник")
+            m["sender_str"] = m.get("sender_name") or m.get("chat_name", "Собеседник")
 
             # filename для скачивания
             if m.get("media_path"):
