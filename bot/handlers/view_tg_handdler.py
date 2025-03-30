@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from db.models.model import User
 from db.services.telegram_crud import (
     list_telegram_accounts,
-    get_telegram_account_by_id,
+    get_user_by_telegram_id,
 )
 import logging
 from aiogram.types import InlineQuery, InlineQueryResultArticle, InputTextMessageContent
@@ -26,26 +26,24 @@ async def inline_view_tg_handler(query: InlineQuery) -> None:
         return  # пропускаем остальные inline-запросы
 
     # Пытаемся найти данные пользователя в БД
-    user_data = get_telegram_account_by_id(query.from_user.id)
+    user_data = get_user_by_telegram_id(query.from_user.id)
+    print(user_data['telegram_user_id'])
     if not user_data:
         # Если пользователь не найден (не авторизован и т.д.)
         logger.error("inline_view_tg_handler: user_data not found!")
         await query.answer(
             results=[],
-            switch_pm_text=(
-                "В базе данных ничего не найдено, либо вы не авторизованы.\n"
-                "Для авторизации нажмите /login"
-            ),
-            # Если хотите кнопку "Перейти к боту", нужно указать непустой switch_pm_parameter
-            # switch_pm_parameter="login",
+            switch_pm_text=("В базе данных пусто, либо не"),
+            switch_pm_parameter="login",
             cache_time=1,
             is_personal=True,
         )
         return
 
     # Получаем список аккаунтов
-    accounts = list_telegram_accounts(user_id=user_data["id"])
-
+    accounts = list_telegram_accounts(user_id=user_data['user_id'])
+    # фильтрация аккаунтов, с параметро is_taken = True
+    accounts = [acc for acc in accounts if not acc.get("is_taken", False)] 
     # Формируем результаты для inline-запроса
     results = []
     if not accounts:
@@ -54,7 +52,8 @@ async def inline_view_tg_handler(query: InlineQuery) -> None:
             InlineQueryResultArticle(
                 id=str(uuid.uuid4()),
                 title="Нет аккаунтов",
-                input_message_content=InputTextMessageContent("У вас нет аккаунтов"),
+                switch_pm_parameter="login",
+                input_message_content=InputTextMessageContent(message_text="У вас нет аккаунтов"),
             )
         )
     else:

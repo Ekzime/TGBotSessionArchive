@@ -284,7 +284,7 @@ def create_telegram_account(
 
         existing_account = (
             db.query(TelegramAccount)
-            .filter((TelegramAccount.phone == phone) | (TelegramAccount.alias == alias))
+            .filter(TelegramAccount.user_id== user_id, (TelegramAccount.phone == phone) | (TelegramAccount.alias == alias))
             .first()
         )
         if existing_account:
@@ -316,29 +316,22 @@ def create_telegram_account(
         return account
 
 
-def get_telegram_account_by_id(account_id: int) -> dict | None:
+def get_user_by_telegram_id(telegram_user_id: int):
     """
-    Возвращает словарь с данными об аккаунте (telegram_accounts), у которого id = account_id,
-    или None, если такого нет.
+    Возвращает объект User, если в таблице user_sessions
+    найдена запись, где telegram_user_id == str(telegram_user_id).
+    Иначе возвращает None.
     """
     with get_db_session() as db:
-        acc = db.query(TelegramAccount).filter_by(id=account_id).first()
-        if not acc:
-            return None
-
-        return {
-            "id": acc.id,
-            "user_id": acc.user_id,
-            "alias": acc.alias,
-            "phone": acc.phone,
-            "session_string": acc.session_string,
-            "two_factor": acc.two_factor,
-            "two_factor_pass": acc.two_factor_pass,
-            "is_monitoring": acc.is_monitoring,
-            "is_taken": acc.is_taken,
-            "created_at": acc.created_at,
-            "updated_at": acc.updated_at,
-        }
+        session_obj = db.query(UserSession).filter_by(telegram_user_id=str(telegram_user_id)).first()
+        if session_obj:
+            return {
+                'id': session_obj.id,
+                'user_id': session_obj.user_id,
+                'telegram_user_id': session_obj.telegram_user_id,
+                'session_token': session_obj.session_token,
+            }
+        return None
 
 
 def get_telegram_account_by_phone(user_id: int, phone: str):
@@ -366,12 +359,12 @@ def get_telegram_account_by_phone(user_id: int, phone: str):
         return None
 
 
-def get_telegram_account_by_alias(alias: str):
+def get_telegram_account_by_alias(user_id:int, alias: str):
     """
     Возвращает одну запись TelegramAccount (или None) по alias и user_id.
     """
     with get_db_session() as db:
-        account = db.query(TelegramAccount).filter_by(alias=alias).first()
+        account = db.query(TelegramAccount).filter_by(user_id=user_id, alias=alias).first()
         if account:
             return {
                 "id": account.id,
@@ -390,7 +383,7 @@ def get_telegram_account_by_alias(alias: str):
 
 def list_telegram_accounts(user_id: int):
     """
-    Возвращает список всех аккаунтов, принадлежащих user_id.
+    Возвращает список всех аккаунтов, принадлежащих user_id.s
     """
     with get_db_session() as db:
         accounts = db.query(TelegramAccount).filter_by(user_id=user_id).all()
@@ -415,12 +408,18 @@ def list_telegram_accounts(user_id: int):
         return result
 
 
-def update_telegram_account(acc: TelegramAccount, **kwargs):
+def update_telegram_account(acc, **kwargs):
     """
     Обновляет поля записи TelegramAccount (session_string, two_factor_pass, is_monitoring, ...).
+    Принимает либо объект модели, либо словарь, содержащий ключ "id".
     """
+    # Определяем, есть ли у acc атрибут id
+    acc_id = acc.id if hasattr(acc, "id") else acc.get("id")
+    if not acc_id:
+        raise ValueError("Невозможно определить идентификатор аккаунта.")
+
     with get_db_session() as db:
-        db_acc = db.query(TelegramAccount).filter_by(id=acc.id).first()
+        db_acc = db.query(TelegramAccount).filter_by(id=acc_id).first()
         if not db_acc:
             return None
 
@@ -430,7 +429,7 @@ def update_telegram_account(acc: TelegramAccount, **kwargs):
             db_acc.updated_at = datetime.utcnow()
             db.commit()
             db.refresh(db_acc)
-            logger.info(f"Аккаунт id={acc.id} обновлён, поля={list(kwargs.keys())}")
+            logger.info(f"Аккаунт id={acc_id} обновлён, поля={list(kwargs.keys())}")
             return db_acc
         except Exception as e:
             db.rollback()

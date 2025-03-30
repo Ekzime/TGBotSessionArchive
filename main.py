@@ -34,6 +34,7 @@ async def on_shutdown():
     logger.info("on_shutdown: Остановка фонового процесса (Telethon)")
     if monitoring_task:
         monitoring_task.cancel()
+        
         with suppress(asyncio.CancelledError):
             await monitoring_task
 
@@ -65,7 +66,7 @@ async def main():
         await dp.start_polling(bot)
     finally:
         # Гарантированно вызов shutdown и закрываем хранилище
-        await dp.shutdown()
+        dp.shutdown()
         await dp.storage.close()
 
 

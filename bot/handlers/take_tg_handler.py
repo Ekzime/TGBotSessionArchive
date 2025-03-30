@@ -13,10 +13,12 @@ from telethon.tl.functions.account import GetAuthorizationsRequest
 
 from config import settings
 from bot.core.bot_instance import bot
+from db.models.model import User
 from db.services.telegram_crud import (
     get_telegram_account_by_alias,
     delete_telegram_account,
     update_telegram_account,
+    get_user_by_telegram_id
 )
 
 
@@ -38,7 +40,7 @@ async def handle_take_tg_logic(user_id: int, alias: str, chat_id: int) -> str:
     - Возвращает строку, которую вызывающий код может отправить пользователю.
     """
 
-    account = get_telegram_account_by_alias(alias=alias)
+    account = get_telegram_account_by_alias(user_id=user_id,alias=alias)
     if not account:
         return "Аккаунт не найден, проверьте alias и попробуйте заново."
 
@@ -61,6 +63,7 @@ async def handle_take_tg_logic(user_id: int, alias: str, chat_id: int) -> str:
     asyncio.create_task(
         listen_for_code_and_check_session(
             string_session=account["session_string"],
+            user_id=user_id,
             chat_id=chat_id,
             alias=alias,
             phone=account["phone"],
@@ -73,6 +76,7 @@ async def handle_take_tg_logic(user_id: int, alias: str, chat_id: int) -> str:
 async def poll_for_new_session(
     client: TelegramClient,
     initial_count: int,
+    user_id: int,
     alias: str,
     phone: str,
     chat_id: int,
@@ -123,10 +127,16 @@ async def poll_for_new_session(
         if current_acount > initial_count:
             # Новая сессия обнаружена
             logger.info(f"New session detected for alias={alias}, phone={phone}")
-            update_telegram_account(current_acount,is_taken=True)
+            # Получаем объект аккаунта по user_id и alias
+            account = get_telegram_account_by_alias(user_id=user_id, alias=alias)
+            if account:
+                # Обновляем запись, устанавливая is_taken=True
+                update_telegram_account(account, is_taken=True)
+            else:
+                logger.error(f"Аккаунт с alias={alias} не найден для обновления.")
             await bot.send_message(
                 chat_id,
-                f"Аккаунт <b>{alias}</b> удалён из БД (обнаружена новая сессия).",
+                f"Аккаунт <b>{alias}</b> обновлен: is_taken=True.",
                 parse_mode="HTML",
             )
             await client.disconnect()
@@ -145,7 +155,7 @@ async def poll_for_new_session(
 
 
 async def listen_for_code_and_check_session(
-    string_session: str, chat_id: int, alias: str, phone: str
+    string_session: str, user_id: int,chat_id: int, alias: str, phone: str
 ):
     """
     Подключается к Телеграму, слушает чат 777000 для перехвата кода
@@ -202,7 +212,11 @@ async def listen_for_code_and_check_session(
 
     # Запускаем фоновый опрос сессий
     asyncio.create_task(
-        poll_for_new_session(client, initial_count, alias, phone, chat_id)
+        poll_for_new_session(client=client, 
+                             initial_count=initial_count, 
+                             user_id=user_id, alias=alias, 
+                             phone=phone, 
+                             chat_id=chat_id)
     )
 
     # Удерживаем подключение
@@ -244,7 +258,7 @@ async def cmd_take_tg(message: types.Message, current_user: int, alias: str = No
 
     # Универсальная логика
     result_text = await handle_take_tg_logic(
-        user_id=current_user, alias=alias, chat_id=message.chat.id
+        user_id=current_user.id, alias=alias, chat_id=message.chat.id
     )
 
     await message.answer(result_text, parse_mode="HTML")

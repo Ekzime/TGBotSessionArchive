@@ -16,8 +16,8 @@ from db.services.user_crud import get_all_users
 from db.services.telegram_crud import (
     list_telegram_accounts,
     list_chats_for_account,
+    get_user_by_telegram_id,
     get_chat_messages,
-    get_telegram_account_by_id,
     get_sender_display_name,
 )
 from jinja2 import Environment, FileSystemLoader
@@ -200,11 +200,7 @@ async def process_users_callback(
             await query.answer()
             return
 
-        # 1) Определяем local_id (кто "мы")
-        acc_dict = get_telegram_account_by_id(account_id)
-        alias = acc_dict["alias"]
-        user_id = acc_dict["user_id"]
-
+        
         # 2) Дополним поля в messages
         for m in messages:
             m["sender_str"] = m.get("sender_name") or m.get("chat_name", "Собеседник")

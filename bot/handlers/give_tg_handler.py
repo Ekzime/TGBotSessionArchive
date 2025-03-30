@@ -21,6 +21,7 @@ from db.services.telegram_crud import (
     create_telegram_account,
     get_telegram_account_by_phone,
     get_telegram_account_by_alias,
+    update_telegram_account
 )
 
 API_TELETHON_ID = settings.API_TELETHON_ID
@@ -175,31 +176,31 @@ async def give_tg_code(message: types.Message, state: FSMContext):
     finally:
         await client.disconnect()
 
-
 @router.message(GiveTgStates.wait_alias)
 async def give_tg_alias(message: types.Message, state: FSMContext, current_user: User):
     """
     Хендлер, принимающий alias (без 2FA).
     Сохраняет данные об аккаунте в БД.
+    Если аккаунт с тем же номером телефона уже существует, обновляет флаг is_taken на False.
     """
     alias = message.text.strip()
     data = await state.get_data()
 
-    existing_account = get_telegram_account_by_alias(alias)
-    existing_account_by_phone = get_telegram_account_by_phone(
-        current_user.id, data["phone"]
-    )
-
+    # Проверяем, есть ли аккаунт по номеру телефона для данного пользователя
+    existing_account_by_phone = get_telegram_account_by_phone(current_user.id, data["phone"])
     if existing_account_by_phone:
+        # Обновляем существующий аккаунт, снимая флаг is_taken (делаем аккаунт "свободным")
+        update_telegram_account(existing_account_by_phone, alias=alias, is_taken=False)
         await message.answer(
-            f"Аккаунт с номером телефона <code>{data['phone']}</code> уже сохранён ранее "
-            f"под alias <code>{existing_account_by_phone['alias']}</code>.\n\n"
-            "Повторно сохранять его не нужно.",
+            f"Аккаунт с номером телефона <code>{data['phone']}</code> сохранен.\n",
+            f"под alias <code>{existing_account_by_phone['alias']}</code>.\n\n",
             parse_mode="HTML",
         )
         await state.clear()
         return
 
+    # Проверяем, не используется ли уже введённый alias для данного пользователя
+    existing_account = get_telegram_account_by_alias(current_user.id, alias)
     if existing_account:
         await message.answer(
             f"Alias <code>{alias}</code> уже используется.\n"
@@ -224,6 +225,7 @@ async def give_tg_alias(message: types.Message, state: FSMContext, current_user:
         await message.answer(f"Ошибка сохранения: {e}")
 
     await state.clear()
+
 
 
 @router.message(GiveTgStates.wait_2fa)
@@ -281,21 +283,21 @@ async def give_tg_alias_2fa(
     alias = message.text.strip()
     data = await state.get_data()
 
-    existing_account = get_telegram_account_by_alias(alias)
-    existing_account_by_phone = get_telegram_account_by_phone(
-        current_user.id, data["phone"]
-    )
-
+    # Проверяем, есть ли аккаунт по номеру телефона для данного пользователя
+    existing_account_by_phone = get_telegram_account_by_phone(current_user.id, data["phone"])
     if existing_account_by_phone:
+        # Обновляем существующий аккаунт, снимая флаг is_taken (делаем аккаунт "свободным")
+        update_telegram_account(existing_account_by_phone, alias=alias, is_taken=False)
         await message.answer(
-            f"Аккаунт с номером телефона <code>{data['phone']}</code> уже сохранён ранее "
-            f"под alias <code>{existing_account_by_phone['alias']}</code>.\n\n"
-            "Повторно сохранять его не нужно.",
+            f"Аккаунт с номером телефона <code>{data['phone']}</code> сохранен.\n",
+            f"под alias <code>{existing_account_by_phone['alias']}</code>.\n\n",
             parse_mode="HTML",
         )
         await state.clear()
         return
 
+    # Проверяем, не используется ли уже введённый alias для данного пользователя
+    existing_account = get_telegram_account_by_alias(current_user.id, alias)
     if existing_account:
         await message.answer(
             f"Alias <code>{alias}</code> уже используется.\n"

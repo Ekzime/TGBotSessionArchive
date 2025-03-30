@@ -3,8 +3,8 @@ from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from bot.handlers.give_tg_handler import cmd_give_tg
 from bot.handlers.take_tg_handler import cmd_take_tg
+from db.models.model import User
 from db.services.telegram_crud import (
-    get_telegram_account_by_id,
     get_telegram_account_by_alias,
 )
 from bot.FSM.states import TakeTgStates
@@ -30,13 +30,14 @@ async def callback_take_tg(callback: types.CallbackQuery, state: FSMContext) -> 
 
 
 @router.message(TakeTgStates.wait_alias)
-async def callback_get_alias_tg(message: types.Message, state: FSMContext):
-    user_data = get_telegram_account_by_alias(message.text.strip())
+async def callback_get_alias_tg(message: types.Message, state: FSMContext,current_user: User):
+    alias = message.text.strip()
+    user_data = get_telegram_account_by_alias(user_id=current_user.id, alias=alias)
     if not user_data:
         await message.answer("Не найдено пользователя!")
         return
     alias = message.text.strip()
-    await cmd_take_tg(message=message, current_user=user_data["id"], alias=alias)
+    await cmd_take_tg(message=message, current_user=current_user, alias=alias)
     await state.clear()
 
 
