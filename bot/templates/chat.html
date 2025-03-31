@@ -41,7 +41,6 @@
       flex-direction: column;
     }
 
-    /* Можно добавить логику и менять incoming/outgoing при необходимости */
     .message.incoming {
       align-items: flex-start;
     }
@@ -160,7 +159,7 @@
     <h2 class="chat-title">Чат № {{ chat_id }}</h2>
 
     {% for m in messages %}
-    {% set message_class = 'incoming' %} {# при необходимости меняйте на 'outgoing' #}
+    {% set message_class = 'incoming' %} 
     <div class="message {{ message_class }}">
       <div class="bubble">
         <!-- Шапка сообщения: отправитель и время -->

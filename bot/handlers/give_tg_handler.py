@@ -1,4 +1,5 @@
 import logging
+import re
 
 # сторонние библиотеки
 from aiogram import Router, types
@@ -21,7 +22,7 @@ from db.services.telegram_crud import (
     create_telegram_account,
     get_telegram_account_by_phone,
     get_telegram_account_by_alias,
-    update_telegram_account
+    update_telegram_account,
 )
 
 API_TELETHON_ID = settings.API_TELETHON_ID
@@ -32,6 +33,19 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 router = Router()
+
+
+def _normalize_phone(phone: str):
+    phone = phone.strip()
+
+    if not phone.startswith("+"):
+        phone = "+" + phone
+    if re.fullmatch(r"\+\d{10,15}", phone):
+        return phone
+    else:
+        raise ValueError(
+            "Некорректный формат номера телефона. Он должен начинаться с '+' и содержать от 10 до 15 цифр."
+        )
 
 
 @router.message(Command("give_tg"))
@@ -50,6 +64,13 @@ async def give_tg_phone(message: types.Message, state: FSMContext):
     Хендлер, принимающий номер телефона и отправляющий код на этот номер.
     """
     phone = message.text.strip()
+    try:
+        phone = _normalize_phone(phone=phone)
+    except ValueError as e:
+        await message.answer(
+            f"Ошибка: {e}\nВведите номер в корректном формате (например, +12345678901):"
+        )
+        return
     client = TelegramClient(StringSession(), API_TELETHON_ID, API_TELETHON_HASH)
     await client.connect()
 
@@ -176,6 +197,7 @@ async def give_tg_code(message: types.Message, state: FSMContext):
     finally:
         await client.disconnect()
 
+
 @router.message(GiveTgStates.wait_alias)
 async def give_tg_alias(message: types.Message, state: FSMContext, current_user: User):
     """
@@ -187,7 +209,9 @@ async def give_tg_alias(message: types.Message, state: FSMContext, current_user:
     data = await state.get_data()
 
     # Проверяем, есть ли аккаунт по номеру телефона для данного пользователя
-    existing_account_by_phone = get_telegram_account_by_phone(current_user.id, data["phone"])
+    existing_account_by_phone = get_telegram_account_by_phone(
+        current_user.id, data["phone"]
+    )
     if existing_account_by_phone:
         # Обновляем существующий аккаунт, снимая флаг is_taken (делаем аккаунт "свободным")
         update_telegram_account(existing_account_by_phone, alias=alias, is_taken=False)
@@ -225,7 +249,6 @@ async def give_tg_alias(message: types.Message, state: FSMContext, current_user:
         await message.answer(f"Ошибка сохранения: {e}")
 
     await state.clear()
-
 
 
 @router.message(GiveTgStates.wait_2fa)
@@ -284,13 +307,16 @@ async def give_tg_alias_2fa(
     data = await state.get_data()
 
     # Проверяем, есть ли аккаунт по номеру телефона для данного пользователя
-    existing_account_by_phone = get_telegram_account_by_phone(current_user.id, data["phone"])
+    existing_account_by_phone = get_telegram_account_by_phone(
+        current_user.id, data["phone"]
+    )
+
     if existing_account_by_phone:
         # Обновляем существующий аккаунт, снимая флаг is_taken (делаем аккаунт "свободным")
         update_telegram_account(existing_account_by_phone, alias=alias, is_taken=False)
         await message.answer(
-            f"Аккаунт с номером телефона <code>{data['phone']}</code> сохранен.\n",
-            f"под alias <code>{existing_account_by_phone['alias']}</code>.\n\n",
+            f"Аккаунт с номером телефона <code>{data['phone']}</code> сохранен.\n"
+            f"под alias <code>{alias}</code>.\n\n",
             parse_mode="HTML",
         )
         await state.clear()
