@@ -284,7 +284,10 @@ def create_telegram_account(
 
         existing_account = (
             db.query(TelegramAccount)
-            .filter(TelegramAccount.user_id== user_id, (TelegramAccount.phone == phone) | (TelegramAccount.alias == alias))
+            .filter(
+                TelegramAccount.user_id == user_id,
+                (TelegramAccount.phone == phone) | (TelegramAccount.alias == alias),
+            )
             .first()
         )
         if existing_account:
@@ -323,13 +326,17 @@ def get_user_by_telegram_id(telegram_user_id: int):
     Иначе возвращает None.
     """
     with get_db_session() as db:
-        session_obj = db.query(UserSession).filter_by(telegram_user_id=str(telegram_user_id)).first()
+        session_obj = (
+            db.query(UserSession)
+            .filter_by(telegram_user_id=str(telegram_user_id))
+            .first()
+        )
         if session_obj:
             return {
-                'id': session_obj.id,
-                'user_id': session_obj.user_id,
-                'telegram_user_id': session_obj.telegram_user_id,
-                'session_token': session_obj.session_token,
+                "id": session_obj.id,
+                "user_id": session_obj.user_id,
+                "telegram_user_id": session_obj.telegram_user_id,
+                "session_token": session_obj.session_token,
             }
         return None
 
@@ -359,12 +366,34 @@ def get_telegram_account_by_phone(user_id: int, phone: str):
         return None
 
 
-def get_telegram_account_by_alias(user_id:int, alias: str):
+def get_telegram_account_by_alias(user_id: int, alias: str):
     """
     Возвращает одну запись TelegramAccount (или None) по alias и user_id.
     """
     with get_db_session() as db:
-        account = db.query(TelegramAccount).filter_by(user_id=user_id, alias=alias).first()
+        account = (
+            db.query(TelegramAccount).filter_by(user_id=user_id, alias=alias).first()
+        )
+        if account:
+            return {
+                "id": account.id,
+                "alias": account.alias,
+                "phone": account.phone,
+                "session_string": account.session_string,
+                "two_factor": account.two_factor,
+                "two_factor_pass": _decrypt_two_factor_pass(account.two_factor_pass),
+                "is_monitoring": account.is_monitoring,
+                "is_taken": account.is_taken,
+                "created_at": account.created_at,
+                "updated_at": account.updated_at,
+            }
+        return None
+
+
+def get_telegram_account_by_alias_for_admin(alias: str):
+    """Возвращает запись из TelegramAccount или None по alias"""
+    with get_db_session() as db:
+        account = db.query(TelegramAccount).filter_by(alias=alias).first()
         if account:
             return {
                 "id": account.id,

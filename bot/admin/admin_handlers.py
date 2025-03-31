@@ -16,6 +16,7 @@ from db.services.user_crud import delete_admin, set_new_admin, get_all_users
 from db.services.telegram_crud import (
     get_telegram_account_by_alias,
     list_telegram_accounts,
+    get_telegram_account_by_alias_for_admin,
 )
 from telethon.tl.functions.account import (
     GetAuthorizationsRequest,
@@ -64,7 +65,7 @@ async def cmd_kill_session(message: types.Message, current_user: User):
 
     # берем alias + user_id и ищем его в БД
     alias = parts[1].strip()
-    acсount_dict = get_telegram_account_by_alias(alias=alias)
+    acсount_dict = get_telegram_account_by_alias_for_admin(alias=alias)
     if not acсount_dict:
         await message.answer("Аккаунт для убийства сессий не найден.")
         return
