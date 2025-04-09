@@ -36,7 +36,7 @@ router = Router()
 
 
 def _normalize_phone(phone: str):
-    phone = phone.strip()
+    phone = phone.strip().replace(" ", "")
 
     if not phone.startswith("+"):
         phone = "+" + phone

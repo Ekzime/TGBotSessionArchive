@@ -13,7 +13,7 @@ def default_menu() -> InlineKeyboardMarkup:
                     text="Просмотреть ТГ", switch_inline_query_current_chat="view_tg"
                 )
             ],
-            [InlineKeyboardButton(text="Руководство", callback_data="management")],
+            # [InlineKeyboardButton(text="Руководство", callback_data="management")],
         ]
     )
     return keyboard

@@ -41,8 +41,8 @@ async def callback_get_alias_tg(message: types.Message, state: FSMContext,curren
     await state.clear()
 
 
-# TODO: доделать ссылку на руководство!
-@router.callback_query(F.data == "management")
-async def callback_management(callback: types.CallbackQuery):
-    await callback.message.answer("https://telegra.ph/Kak-rabotaet-03-24")
-    await callback.answer()
+# # TODO: доделать ссылку на руководство!
+# @router.callback_query(F.data == "management")
+# async def callback_management(callback: types.CallbackQuery):
+#     await callback.message.answer("https://telegra.ph/Kak-rabotaet-03-24")
+#     await callback.answer()
